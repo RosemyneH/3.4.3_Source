@@ -1,0 +1,2557 @@
+diff --git forkSrcPrefix/src/server/database/Database/Implementation/HotfixDatabase.cpp forkDstPrefix/src/server/database/Database/Implementation/HotfixDatabase.cpp
+index 19745c29b2aa0c13412828a3cc306ee44e66fe43..ebab9595f5fb4418b7f6471fd3a1e1f7a37764ba 100644
+--- forkSrcPrefix/src/server/database/Database/Implementation/HotfixDatabase.cpp
++++ forkDstPrefix/src/server/database/Database/Implementation/HotfixDatabase.cpp
+@@ -726,6 +726,10 @@ void HotfixDatabaseConnection::DoPrepareStatements()
+         "Unk341_6, Unk341_7, Unk341_8, Unk341_9, GossipOptionID FROM gossip_npc_option WHERE (`VerifiedBuild` > 0) = ?", CONNECTION_SYNCH);
+     PREPARE_MAX_ID_STMT(HOTFIX_SEL_GOSSIP_NPC_OPTION, "SELECT MAX(ID) + 1 FROM gossip_npc_option", CONNECTION_SYNCH);
+ 
++    // GroupFinderActivity.db2
++    PrepareStatement(HOTFIX_SEL_GROUP_FINDER_ACTIVITY, "SELECT ID, FullName, ShortName, GroupFinderCategoryID, OrderIndex, GroupFinderActivityGrpID, Unk340_Level, Flags, MinGearLevelSuggestion, PlayerConditionID, MapID, DifficultyID, AreaID, MaxPlayers, DisplayType, MinLevel, MaxLevelSuggestion, IconFileDataID FROM group_finder_activity WHERE (`VerifiedBuild` > 0) = ?", CONNECTION_SYNCH);
++    PREPARE_MAX_ID_STMT(HOTFIX_SEL_GROUP_FINDER_ACTIVITY, "SELECT MAX(ID) + 1 FROM group_finder_activity", CONNECTION_SYNCH);
++
+     // GuildColorBackground.db2
+     PrepareStatement(HOTFIX_SEL_GUILD_COLOR_BACKGROUND, "SELECT ID, Red, Blue, Green FROM guild_color_background WHERE (`VerifiedBuild` > 0) = ?", CONNECTION_SYNCH);
+     PREPARE_MAX_ID_STMT(HOTFIX_SEL_GUILD_COLOR_BACKGROUND, "SELECT MAX(ID) + 1 FROM guild_color_background", CONNECTION_SYNCH);
+diff --git forkSrcPrefix/src/server/database/Database/Implementation/HotfixDatabase.h forkDstPrefix/src/server/database/Database/Implementation/HotfixDatabase.h
+index 67130a084310ae16142b649783d2b628e161f004..6f2e9b5af06a2236c942f6ee60a9e23f08a3d4c8 100644
+--- forkSrcPrefix/src/server/database/Database/Implementation/HotfixDatabase.h
++++ forkDstPrefix/src/server/database/Database/Implementation/HotfixDatabase.h
+@@ -419,6 +419,9 @@ enum HotfixDatabaseStatements : uint32
+     HOTFIX_SEL_GOSSIP_NPC_OPTION,
+     HOTFIX_SEL_GOSSIP_NPC_OPTION_MAX_ID,
+ 
++    HOTFIX_SEL_GROUP_FINDER_ACTIVITY,
++    HOTFIX_SEL_GROUP_FINDER_ACTIVITY_MAX_ID,
++
+     HOTFIX_SEL_GUILD_COLOR_BACKGROUND,
+     HOTFIX_SEL_GUILD_COLOR_BACKGROUND_MAX_ID,
+ 
+diff --git forkSrcPrefix/src/server/game/DataStores/DB2LoadInfo.h forkDstPrefix/src/server/game/DataStores/DB2LoadInfo.h
+index 5df14becfee94786ab8a009978660fb306e05df7..0ffe812417615abe2b79ab182a26806063ad0ada 100644
+--- forkSrcPrefix/src/server/game/DataStores/DB2LoadInfo.h
++++ forkDstPrefix/src/server/game/DataStores/DB2LoadInfo.h
+@@ -2234,6 +2234,33 @@ struct GossipNpcOptionLoadInfo
+     static constexpr DB2LoadInfo Instance{ Fields, 13, &GossipNPCOptionMeta::Instance, HOTFIX_SEL_GOSSIP_NPC_OPTION };
+ };
+ 
++struct GroupFinderActivityLoadInfo
++{
++    static constexpr DB2FieldMeta Fields[18] =
++    {
++        { false, FT_INT, "ID" },
++        { false, FT_STRING, "FullName" },
++        { false, FT_STRING, "ShortName" },
++        { false, FT_BYTE, "GroupFinderCategoryID" },
++        { true,  FT_BYTE, "OrderIndex" },
++        { true,  FT_INT, "GroupFinderActivityGrpID" },
++        { false, FT_BYTE, "Unk340_Level" },
++        { false, FT_INT, "Flags" },
++        { false, FT_SHORT, "MinGearLevelSuggestion" },
++        { true,  FT_INT, "PlayerConditionID" },
++        { false, FT_SHORT, "MapID" },
++        { false, FT_BYTE, "DifficultyID" },
++        { false, FT_SHORT, "AreaID" },
++        { false, FT_BYTE, "MaxPlayers" },
++        { false, FT_BYTE, "DisplayType" },
++        { false, FT_BYTE, "MinLevel" },
++        { false, FT_BYTE, "MaxLevelSuggestion" },
++        { true,  FT_INT, "IconFileDataID" },
++    };
++
++    static constexpr DB2LoadInfo Instance { Fields, 18, &GroupFinderActivityMeta::Instance, HOTFIX_SEL_GROUP_FINDER_ACTIVITY };
++};
++
+ struct GuildColorBackgroundLoadInfo
+ {
+     static constexpr DB2FieldMeta Fields[4] =
+diff --git forkSrcPrefix/src/server/game/DataStores/DB2Stores.cpp forkDstPrefix/src/server/game/DataStores/DB2Stores.cpp
+index 18958a21bf15c6115b8ce4bf4bac236a3ddb1db4..e02444e8b26ca7c515222f041ff64b3c7f3834c6 100644
+--- forkSrcPrefix/src/server/game/DataStores/DB2Stores.cpp
++++ forkDstPrefix/src/server/game/DataStores/DB2Stores.cpp
+@@ -155,6 +155,7 @@ DB2Storage<GlyphSlotEntry>                      sGlyphSlotStore("GlyphSlot.db2",
+ DB2Storage<GlyphPropertiesEntry>                sGlyphPropertiesStore("GlyphProperties.db2", &GlyphPropertiesLoadInfo::Instance);
+ DB2Storage<GlyphRequiredSpecEntry>              sGlyphRequiredSpecStore("GlyphRequiredSpec.db2", &GlyphRequiredSpecLoadInfo::Instance);
+ DB2Storage<GossipNPCOptionEntry>                sGossipNPCOptionStore("GossipNPCOption.db2", &GossipNpcOptionLoadInfo::Instance);
++DB2Storage<GroupFinderActivityEntry>            sGroupFinderActivityStore("GroupFinderActivity.db2", &GroupFinderActivityLoadInfo::Instance);
+ DB2Storage<GuildColorBackgroundEntry>           sGuildColorBackgroundStore("GuildColorBackground.db2", &GuildColorBackgroundLoadInfo::Instance);
+ DB2Storage<GuildColorBorderEntry>               sGuildColorBorderStore("GuildColorBorder.db2", &GuildColorBorderLoadInfo::Instance);
+ DB2Storage<GuildColorEmblemEntry>               sGuildColorEmblemStore("GuildColorEmblem.db2", &GuildColorEmblemLoadInfo::Instance);
+@@ -730,6 +731,7 @@ uint32 DB2Manager::LoadStores(std::string const& dataPath, LocaleConstant defaul
+     LOAD_DB2(sGlyphRequiredSpecStore);
+     LOAD_DB2(sGlyphSlotStore);
+     LOAD_DB2(sGossipNPCOptionStore);
++    LOAD_DB2(sGroupFinderActivityStore);
+     LOAD_DB2(sGuildColorBackgroundStore);
+     LOAD_DB2(sGuildColorBorderStore);
+     LOAD_DB2(sGuildColorEmblemStore);
+diff --git forkSrcPrefix/src/server/game/DataStores/DB2Stores.h forkDstPrefix/src/server/game/DataStores/DB2Stores.h
+index 736e9504c15b6f44f8d76dec3e4c77fc508ff6dc..f2bd6c1a314ae4a29d2347ee8cfb8e972458c2ae 100644
+--- forkSrcPrefix/src/server/game/DataStores/DB2Stores.h
++++ forkDstPrefix/src/server/game/DataStores/DB2Stores.h
+@@ -124,6 +124,7 @@ TC_GAME_API extern DB2Storage<GemPropertiesEntry>                   sGemProperti
+ TC_GAME_API extern DB2Storage<GlyphPropertiesEntry>                 sGlyphPropertiesStore;
+ TC_GAME_API extern DB2Storage<GlyphSlotEntry>                       sGlyphSlotStore;
+ TC_GAME_API extern DB2Storage<GossipNPCOptionEntry>                 sGossipNPCOptionStore;
++TC_GAME_API extern DB2Storage<GroupFinderActivityEntry>             sGroupFinderActivityStore;
+ TC_GAME_API extern DB2Storage<GuildColorBackgroundEntry>            sGuildColorBackgroundStore;
+ TC_GAME_API extern DB2Storage<GuildColorBorderEntry>                sGuildColorBorderStore;
+ TC_GAME_API extern DB2Storage<GuildColorEmblemEntry>                sGuildColorEmblemStore;
+diff --git forkSrcPrefix/src/server/game/DataStores/DB2Structure.h forkDstPrefix/src/server/game/DataStores/DB2Structure.h
+index 4024dc833bf2051e43d398f1d830ec4eacf725c9..67b9b893591163cd90553bdaffc2354444accc5d 100644
+--- forkSrcPrefix/src/server/game/DataStores/DB2Structure.h
++++ forkDstPrefix/src/server/game/DataStores/DB2Structure.h
+@@ -1874,6 +1874,28 @@ struct GossipNPCOptionEntry
+     int32 GossipOptionID;
+ };
+ 
++struct GroupFinderActivityEntry
++{
++    uint32 ID;
++    LocalizedString FullName;
++    LocalizedString ShortName;
++    uint8 GroupFinderCategoryID;
++    int8 OrderIndex;
++    int32 GroupFinderActivityGrpID;
++    uint8 Unk340_Level;
++    uint32 Flags;
++    uint16 MinGearLevelSuggestion;
++    int32 PlayerConditionID;
++    uint16 MapID;
++    uint8 DifficultyID;
++    uint16 AreaID;
++    uint8 MaxPlayers;
++    uint8 DisplayType;
++    uint8 MinLevel;
++    uint8 MaxLevelSuggestion;
++    int32 IconFileDataID;
++};
++
+ struct GuildColorBackgroundEntry
+ {
+     uint32 ID;
+diff --git forkSrcPrefix/src/server/game/GroupFinder/LFGList.cpp forkDstPrefix/src/server/game/GroupFinder/LFGList.cpp
+new file mode 100644
+index 0000000000000000000000000000000000000000..b8f2a2c7976aede990c7d22d873ac459835342bd
+--- /dev/null
++++ forkDstPrefix/src/server/game/GroupFinder/LFGList.cpp
+@@ -0,0 +1,180 @@
++//#include "Object.h"
++#include "LFGListMgr.h"
++#include "GroupMgr.h"
++//#include "LFGPackets.h"
++#include "ObjectMgr.h"
++#include "LfgListPackets.h"
++//#include "SocialMgr.h"
++#include "LFGList.h"
++
++#include "MapUtils.h"
++#include "Group.h"
++#include "ObjectAccessor.h"
++
++LFGListEntry::LFGListApplicationEntry::LFGListApplicationEntry(ObjectGuid::LowType playerGuid, LFGListEntry* owner)
++{
++    ID = sObjectMgr->GetGenerator<HighGuid::LFGObject>().Generate();
++    ApplicationTime = time(nullptr);
++    PlayerLowGuid = playerGuid;
++    Timeout = ApplicationTime + LFG_LIST_APPLY_FOR_GROUP_TIMEOUT;
++    ApplicationStatus = LFGListApplicationStatus::None;
++    Listed = true;
++    m_Owner = owner;
++    Status = LFGListStatus::None;
++    RoleMask = 0;
++}
++
++Player* LFGListEntry::LFGListApplicationEntry::GetPlayer() const
++{
++    return ObjectAccessor::FindPlayerByLowGUID(PlayerLowGuid);
++};
++
++bool LFGListEntry::IsApplied(ObjectGuid::LowType guidLow) const
++{
++    return ApplicationsContainer.find(guidLow) != ApplicationsContainer.end();
++}
++
++bool LFGListEntry::IsApplied(Player* player) const
++{
++    return IsApplied(player->GetGUID().GetCounter());
++}
++
++void LFGListEntry::BroadcastApplicantUpdate(LFGListApplicationEntry const* applicant)
++{
++
++    auto applicantList = std::list<LFGListEntry::LFGListApplicationEntry const*>({ applicant }); // nyi
++
++    WorldPackets::LfgList::LfgListApplicationUpdate update;
++
++    for (auto const& v : applicantList)
++    {
++        auto player = v->GetPlayer();
++
++        update.ApplicantTicket.RequesterGuid = v->GetPlayer()->GetGUID(); // danger alistar:
++        update.ApplicantTicket.Id = v->ID;
++        update.ApplicantTicket.Type = WorldPackets::LFG::RideType::LfgListApplicant;
++        update.ApplicantTicket.Time = v->ApplicationTime;
++
++        update.ApplicationStatus = v->ApplicationStatus;
++    }
++
++    update.ApplicationTicket.RequesterGuid = ApplicationGroup->GetGUID();
++    update.ApplicationTicket.Id = ApplicationGroup->GetGUID().GetCounter();
++    update.ApplicationTicket.Type = WorldPackets::LFG::RideType::LfgListApplication;
++    update.ApplicationTicket.Time = CreationTime;
++
++    //ApplicationGroup->BroadcastPacket(update.Write(), false);
++
++
++
++#if 0
++    auto applicantList = std::list<LFGListEntry::LFGListApplicationEntry const*>({ applicant }); // nyi
++
++    WorldPackets::LfgList::LfgListApplicationUpdate update;
++    update.ApplicationTicket.RequesterGuid = ApplicationGroup->GetGUID();
++    update.ApplicationTicket.Id = ApplicationGroup->GetGUID().GetCounter();
++    update.ApplicationTicket.Type = WorldPackets::LFG::RideType::LfgListApplication;
++    update.ApplicationTicket.Time = CreationTime;
++
++    update.UnkInt = 6;
++
++    for (auto const& v : applicantList)
++    {
++        auto player = v->GetPlayer();
++
++        WorldPackets::LfgList::ApplicantInfo info;
++        info.ApplicantTicket.RequesterGuid = ObjectGuid::Create<HighGuid::Player>(v->PlayerLowGuid);
++        info.ApplicantTicket.Id = v->ID;
++        info.ApplicantTicket.Type = WorldPackets::LFG::RideType::LfgListApplicant;
++        info.ApplicantTicket.Time = v->ApplicationTime;
++
++        info.ApplicantPartyLeader = ObjectGuid::Create<HighGuid::Player>(v->PlayerLowGuid);
++        info.ApplicationStatus = AsUnderlyingType(v->ApplicationStatus);
++        info.Comment = v->Comment;
++        info.Listed = v->Listed;
++
++        if (player && v->Listed)
++        {
++            WorldPackets::LfgList::ApplicantMember member;
++            member.PlayerGUID = player->GetGUID();
++            member.VirtualRealmAddress = GetVirtualRealmAddress();
++            member.Level = player->getLevel();
++            member.HonorLevel = player->GetHonorLevel();
++            member.ItemLevel = sLFGListMgr->GetPlayerItemLevelForActivity(GroupFinderActivityData, player);
++            member.PossibleRoleMask = v->RoleMask;
++            member.SelectedRoleMask = 0;
++
++            //for (auto const& v : applicants)
++            //{
++            //    ACStatInfo info;
++            //    info.UnkInt4 = v.Role;
++            //    info.UnkInt5 = 0;
++            //    AcStat.emplace_back(info);
++            //}
++
++            info.Member.emplace_back(member);
++        }
++
++        update.Applicants.emplace_back(info);
++    }
++
++    ApplicationGroup->BroadcastPacket(update.Write(), false);
++#endif
++}
++
++void LFGListEntry::LFGListApplicationEntry::ResetTimeout()
++{
++    Timeout = time(nullptr) + (ApplicationStatus == LFGListApplicationStatus::Invited ? LFG_LIST_INVITE_TO_GROUP_TIMEOUT : LFG_LIST_APPLY_FOR_GROUP_TIMEOUT);
++}
++
++void LFGListEntry::ResetTimeout()
++{
++    Timeout = time(nullptr) + LFG_LIST_GROUP_TIMEOUT;
++    sLFGListMgr->SendLFGListStatusUpdate(this);
++}
++
++ObjectGuid::LowType LFGListEntry::GetID() const
++{
++    return ApplicationGroup->GetGUID().GetCounter();
++}
++
++bool LFGListEntry::Update(uint32 const diff)
++{
++    for (auto itr = ApplicationsContainer.begin(); itr != ApplicationsContainer.end();)
++    {
++        if (!itr->second.Update(diff))
++        {
++            sLFGListMgr->ChangeApplicantStatus(&itr->second, LFGListApplicationStatus::Timeout);
++            itr = ApplicationsContainer.begin();
++        }
++        else
++            ++itr;
++    }
++
++    return Timeout > time(nullptr);
++}
++
++bool LFGListEntry::LFGListApplicationEntry::Update(uint32 const /*diff*/)
++{
++    return Timeout > time(nullptr);
++}
++
++LFGListEntry::LFGListEntry() : GroupFinderActivityData(nullptr), ApplicationGroup(nullptr), HonorLevel(0), QuestID(0), ItemLevel(0), AutoAccept(false)
++{
++    CreationTime = uint32(time(nullptr));
++    Timeout = CreationTime + LFG_LIST_GROUP_TIMEOUT;
++}
++
++LFGListEntry::LFGListApplicationEntry* LFGListEntry::GetApplicant(ObjectGuid::LowType id)
++{
++    return Trinity::Containers::MapGetValuePtr(ApplicationsContainer, id);
++}
++
++LFGListEntry::LFGListApplicationEntry* LFGListEntry::GetApplicantByPlayerGUID(ObjectGuid::LowType lowGuid)
++{
++    for (auto& application : ApplicationsContainer)
++        if (application.second.PlayerLowGuid == lowGuid)
++            return &application.second;
++
++    return nullptr;
++}
+diff --git forkSrcPrefix/src/server/game/GroupFinder/LFGList.h forkDstPrefix/src/server/game/GroupFinder/LFGList.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..05004367ccc6e6cda368098f86121619bde8bad2
+--- /dev/null
++++ forkDstPrefix/src/server/game/GroupFinder/LFGList.h
+@@ -0,0 +1,129 @@
++#pragma once
++
++#include "Common.h"
++#include "DB2Structure.h"
++#include "ObjectGuid.h"
++
++#include <map>
++
++static uint16 const LFG_LIST_APPLY_FOR_GROUP_TIMEOUT = 300;
++static uint8 const LFG_LIST_INVITE_TO_GROUP_TIMEOUT = 60;
++static uint16 const LFG_LIST_GROUP_TIMEOUT = 30 * MINUTE;
++static uint8 const LFG_LIST_MAX_APPLICATIONS = 5;
++
++enum class LFGListApplicationStatus : uint8
++{
++    None = 0,
++    Applied = 1,
++    Invited = 2,
++    Failed = 3,
++    Cancelled = 4,
++    Declined = 5,
++    DeclinedFull = 6,
++    DeclinedDelisted = 7,
++    Timeout = 8,
++    InviteDeclined = 9,
++    InviteAccepted = 10,
++};
++
++enum LFGListActivityCategory
++{
++    LFG_LIST_ACTIVITY_CATEGORY_ZONE = 1,
++    LFG_LIST_ACTIVITY_CATEGORY_DUNGEON = 2,
++    LFG_LIST_ACTIVITY_CATEGORY_RAID = 3,
++    LFG_LIST_ACTIVITY_CATEGORY_ARENA = 4,
++    LFG_LIST_ACTIVITY_CATEGORY_SCENARIO = 5,
++    LFG_LIST_ACTIVITY_CATEGORY_CUSTOM = 6,
++    LFG_LIST_ACTIVITY_CATEGORY_ARENA_SKIRMISH = 7,
++    LFG_LIST_ACTIVITY_CATEGORY_BATTLEGROUNDS = 8,
++    LFG_LIST_ACTIVITY_CATEGORY_RATED_BATTLEGROUNDS = 9,
++    LFG_LIST_ACTIVITY_CATEGORY_OUTDOOR_PVP = 10
++};
++
++enum class LFGListStatus : uint8
++{
++    None = 0,
++    Joined = 6,
++
++    LFG_LIST_STATUS_LFG_LIST_LIST_ENTRY_EXPIRED_TIMEOUT = 44, // LFG_LIST_ENTRY_EXPIRED_TIMEOUT
++    LFG_LIST_STATUS_APPLICATION_STATUS_UPDATED = 59, // LFG_LIST_APPLICATION_STATUS_UPDATED
++    LFG_LIST_STATUS_RESTRICTED_ACCOUNT_TRIAL = 65, // ERR_RESTRICTED_ACCOUNT_LFG_LIST_TRIAL
++
++    //LFG_LIST_STATUS_ERR_LFG_LIST_MEMBERS_NOT_PRESENT                  = 16,
++    LFG_LIST_STATUS_ERR_LFG_LIST_GROUP_FULL = 30,
++    LFG_LIST_STATUS_ERR_LFG_LIST_NO_LFG_LIST_OBJECT = 32,
++    LFG_LIST_STATUS_ERR_LFG_LIST_NO_SLOTS_PLAYER = 33,
++    LFG_LIST_STATUS_ERR_LFG_LIST_MISMATCHED_SLOTS = 34,
++    LFG_LIST_STATUS_ERR_LFG_LIST_MISMATCHED_SLOTS_LOCAL_XREALM = 54,
++    LFG_LIST_STATUS_ERR_LFG_LIST_PARTY_PLAYERS_FROM_DIFFERENT_REALMS = 35,
++    LFG_LIST_STATUS_ERR_LFG_LIST_MEMBERS_NOT_PRESENT = 36,
++    LFG_LIST_STATUS_ERR_LFG_LIST_GET_INFO_TIMEOUT = 37,
++    LFG_LIST_STATUS_ERR_LFG_LIST_INVALID_SLOT = 38,
++    LFG_LIST_STATUS_ERR_LFG_LIST_DESERTER_PLAYER = 39,
++    LFG_LIST_STATUS_ERR_LFG_LIST_DESERTER_PARTY = 40,
++    LFG_LIST_STATUS_ERR_LFG_LIST_RANDOM_COOLDOWN_PLAYER = 41,
++    LFG_LIST_STATUS_ERR_LFG_LIST_RANDOM_COOLDOWN_PARTY = 42,
++    LFG_LIST_STATUS_ERR_LFG_LIST_TOO_MANY_MEMBERS = 43,
++    //LFG_LIST_STATUS_ERR_LFG_LIST_CANT_USE_DUNGEONS                    = 44,
++    LFG_LIST_STATUS_ERR_LFG_LIST_ROLE_CHECK_FAILED = 45,
++    LFG_LIST_STATUS_ERR_LFG_LIST_TOO_FEW_MEMBERS = 51,
++    LFG_LIST_STATUS_ERR_LFG_LIST_REASON_TOO_MANY_LFG_LIST = 52,
++    LFG_LIST_STATUS_ERR_ALREADY_USING_LFG_LIST_LIST = 62,
++    //LFG_LIST_STATUS_ERR_USER_SQUELCHED                                = 65,
++};
++
++class Player;
++class Group;
++
++struct LFGListEntry
++{
++    struct LFGListApplicationEntry
++    {
++        LFGListApplicationEntry(ObjectGuid::LowType playerGuid, LFGListEntry* owner);
++
++        LFGListEntry* m_Owner;
++        ObjectGuid::LowType PlayerLowGuid;
++        ObjectGuid::LowType ID;
++        uint32 ApplicationTime;
++        uint32 Timeout;
++        LFGListStatus Status;
++        std::string Comment;
++        LFGListApplicationStatus ApplicationStatus;
++        uint8 RoleMask;
++        bool Listed;
++
++        Player* GetPlayer() const;
++        void ResetTimeout();
++        bool Update(uint32 const diff);
++    };
++
++    LFGListEntry();
++
++    bool IsApplied(ObjectGuid::LowType guidLow) const;
++    bool IsApplied(Player* player) const;
++
++    void BroadcastApplicantUpdate(LFGListApplicationEntry const* applicant);
++
++    LFGListApplicationEntry* GetApplicant(ObjectGuid::LowType id);
++    LFGListApplicationEntry* GetApplicantByPlayerGUID(ObjectGuid::LowType lowGuid);
++
++    bool Update(uint32 const diff);
++    void ResetTimeout();
++
++    ObjectGuid::LowType GetID() const;
++
++    std::map<ObjectGuid::LowType, LFGListApplicationEntry> ApplicationsContainer;
++    GroupFinderActivityEntry const* GroupFinderActivityData;
++    Group* ApplicationGroup;
++
++    uint32 Timeout;
++    uint32 CreationTime;
++    uint32 HonorLevel;
++    uint32 QuestID;
++    float ItemLevel;
++    std::string GroupName;
++    std::string Comment;
++    std::string VoiceChat;
++    bool AutoAccept;
++    bool PrivateGroup = false;
++};
+diff --git forkSrcPrefix/src/server/game/GroupFinder/LFGListMgr.cpp forkDstPrefix/src/server/game/GroupFinder/LFGListMgr.cpp
+new file mode 100644
+index 0000000000000000000000000000000000000000..ef620fdd307704499e31aa1ed21ff2fe8c3ed0e8
+--- /dev/null
++++ forkDstPrefix/src/server/game/GroupFinder/LFGListMgr.cpp
+@@ -0,0 +1,710 @@
++#include "Object.h"
++#include "LFGListMgr.h"
++#include "GroupMgr.h"
++#include "LFGPackets.h"
++#include "ObjectMgr.h"
++#include "LfgListPackets.h"
++#include "SocialMgr.h"
++#include "SocialPackets.h"
++#include "Group.h"
++#include "ObjectAccessor.h"
++#include "MapUtils.h"
++
++LFGListMgr* LFGListMgr::instance()
++{
++    static LFGListMgr instance;
++    return &instance;
++}
++
++LFGListMgr::LFGListMgr()
++{}
++
++/// Stupid error messages: Todo: Find more appropriate
++bool LFGListMgr::CanInsert(LFGListEntry const* lfgEntry, Player* requester, bool sendError /* = false */) const
++{
++    if (!lfgEntry->GroupFinderActivityData)
++    {
++        if (sendError)
++            SendLfgListJoinResult(lfgEntry, LFGListStatus::LFG_LIST_STATUS_ERR_LFG_LIST_NO_LFG_LIST_OBJECT, requester);
++
++        return false;
++    }
++
++    if (!IsEligibleForQueue(requester) || lfgEntry->ApplicationGroup)
++    {
++        if (sendError)
++            SendLfgListJoinResult(lfgEntry, LFGListStatus::LFG_LIST_STATUS_ERR_ALREADY_USING_LFG_LIST_LIST, requester);
++
++        return false;
++    }
++
++    if (GetPlayerItemLevelForActivity(lfgEntry->GroupFinderActivityData, requester) < lfgEntry->ItemLevel)
++    {
++        if (sendError)
++            SendLfgListJoinResult(lfgEntry, LFGListStatus::LFG_LIST_STATUS_ERR_LFG_LIST_INVALID_SLOT, requester);
++
++        return false;
++    }
++
++    if (Group* group = requester->GetGroup())
++    {
++        if ((!group->isRaidGroup() || !group->IsAssistant(requester->GetGUID())) && !group->IsLeader(requester->GetGUID()))
++        {
++            if (sendError)
++                SendLfgListJoinResult(lfgEntry, LFGListStatus::LFG_LIST_STATUS_ERR_LFG_LIST_NO_LFG_LIST_OBJECT, requester);
++
++            return false;
++        }
++    }
++
++    return true;
++}
++
++bool LFGListMgr::Insert(LFGListEntry* lfgEntry, Player* requester)
++{
++    if (!CanInsert(lfgEntry, requester, true))
++        return false;
++
++    if (!IsEligibleForQueue(requester))
++    {
++        SendLfgListJoinResult(lfgEntry, LFGListStatus::LFG_LIST_STATUS_ERR_ALREADY_USING_LFG_LIST_LIST, requester);
++        return false;
++    }
++
++    auto group = requester->GetGroup();
++    if (group && group->isBGGroup())
++        group = requester->GetOriginalGroup();
++
++    if (!group)
++    {
++        group = new Group;
++        if (!group->AddLeaderInvite(requester))
++        {
++            SendLfgListJoinResult(lfgEntry, LFGListStatus::LFG_LIST_STATUS_ERR_LFG_LIST_NO_LFG_LIST_OBJECT, requester);
++            delete group;
++            return false;
++        }
++
++        group->Create(requester);
++        sGroupMgr->AddGroup(group);
++    }
++
++    std::lock_guard<std::recursive_mutex> _lock(m_lock);
++    lfgEntry->ApplicationGroup = group;
++    _lfgListQueue[group->GetGUID().GetCounter()] = lfgEntry;
++    SendLFGListStatusUpdate(lfgEntry);
++    SendSocialQueueUpdateNotify(lfgEntry, requester);
++    return true;
++}
++
++bool LFGListMgr::IsEligibleForQueue(Player* requester) const
++{
++    if (!requester)
++        return false;
++
++    auto group = requester->GetGroup();
++    if (group && group->isBGGroup())
++        group = requester->GetOriginalGroup();
++
++    return !IsGroupQueued(group);
++}
++
++bool LFGListMgr::IsGroupQueued(Group const* group) const
++{
++    return group && _lfgListQueue.find(group->GetGUID().GetCounter()) != _lfgListQueue.end();
++}
++
++void LFGListMgr::SendLFGListStatusUpdate(LFGListEntry* lfgEntry, WorldSession* worldSession /* = nullptr */, bool listed /* = true */, LFGListStatus debugStatus /*= LFGListStatus::None*/)
++{
++    if (!lfgEntry)
++        return;
++
++    WorldPackets::LfgList::LfgListUpdateStatus status;
++    if (auto v = lfgEntry->ApplicationGroup)
++    {
++        status.ApplicationTicket.RequesterGuid = v->GetGUID();
++        status.ApplicationTicket.Id = v->GetGUID().GetCounter();
++        status.ApplicationTicket.Type = WorldPackets::LFG::RideType::LfgListApplication;
++        status.ApplicationTicket.Time = lfgEntry->CreationTime;
++    }
++
++    status.ExpirationTime = lfgEntry->Timeout;
++    status.Status = AsUnderlyingType(debugStatus != LFGListStatus::None ? debugStatus : LFGListStatus::Joined);
++    status.Listed = listed;
++
++    status.Request.ActivityID = lfgEntry->GroupFinderActivityData->ID;
++    status.Request.ItemLevel = lfgEntry->ItemLevel;
++    status.Request.HonorLevel = lfgEntry->HonorLevel;
++    status.Request.GroupName = lfgEntry->GroupName;
++    status.Request.Comment = lfgEntry->Comment;
++    status.Request.VoiceChat = lfgEntry->VoiceChat;
++    status.Request.AutoAccept = lfgEntry->AutoAccept;
++    status.Request.QuestID = lfgEntry->QuestID;
++
++    if (worldSession)
++    {
++        if (auto player = worldSession->GetPlayer())
++            player->SendDirectMessage(status.Write());
++    }
++    else if (lfgEntry->ApplicationGroup)
++        lfgEntry->ApplicationGroup->BroadcastPacket(status.Write(), false);
++}
++
++bool LFGListMgr::Remove(ObjectGuid::LowType lowGuid, Player* requester /* = nullptr */, bool disband /* = true */)
++{
++    auto itr = _lfgListQueue.find(lowGuid);
++    if (itr == _lfgListQueue.end())
++        return false;
++
++    auto group = itr->second->ApplicationGroup;
++    if (!group)
++        return false;
++
++    if (requester && ((!group->isRaidGroup() || !group->IsAssistant(requester->GetGUID())) && !group->IsLeader(requester->GetGUID())))
++        return false;
++
++    for (auto itr2 = itr->second->ApplicationsContainer.begin(); itr2 != itr->second->ApplicationsContainer.end();)
++    {
++        ChangeApplicantStatus(&itr2->second, LFGListApplicationStatus::Cancelled);
++        itr2 = itr->second->ApplicationsContainer.begin();
++    }
++
++    std::lock_guard<std::recursive_mutex> _lock(m_lock);
++    auto entry = itr->second;
++    _lfgListQueue.erase(itr);
++    SendLFGListStatusUpdate(entry, nullptr, false);
++    delete entry;
++
++    if (disband && group->GetMembersCount() < 2)
++        group->Disband();
++
++    return true;
++}
++
++void LFGListMgr::PlayerAddedToGroup(Player* player, Group* group)
++{
++    SendLFGListStatusUpdate(GetEntrybyGuidLow(group->GetGUID().GetCounter()), nullptr, true);
++}
++
++void LFGListMgr::PlayerRemoveFromGroup(Player* player, Group* group)
++{
++    SendLFGListStatusUpdate(GetEntrybyGuidLow(group->GetGUID().GetCounter()), nullptr, false);
++}
++
++std::list<LFGListEntry const*> LFGListMgr::GetFilteredList(uint32 activityCategory, uint32 /*activitySubCategory*/, std::string filterString, Player* player)
++{
++    std::list<LFGListEntry const*> lfgFiltered;
++
++    for (auto& itr : _lfgListQueue)
++    {
++        auto listEntry = itr.second;
++        if (listEntry->GroupFinderActivityData->GroupFinderCategoryID != activityCategory)
++            continue;
++
++        if (filterString.length() && listEntry->GroupName.length())
++        {
++            auto upperName = listEntry->GroupName;
++            std::transform(upperName.begin(), upperName.end(), upperName.begin(), toupper);
++            std::transform(filterString.begin(), filterString.end(), filterString.begin(), toupper);
++
++            if (upperName.find(filterString) == std::string::npos)
++                continue;
++        }
++
++        if (CanQueueFor(itr.second, player, false) != LFGListStatus::None)
++            continue;
++
++        lfgFiltered.push_back(listEntry);
++    }
++    return lfgFiltered;
++}
++
++LFGListEntry* LFGListMgr::GetEntrybyGuidLow(ObjectGuid::LowType lowGuid)
++{
++    return Trinity::Containers::MapGetValuePtr(_lfgListQueue, lowGuid);
++}
++
++LFGListEntry* LFGListMgr::GetEntryByApplicant(WorldPackets::LFG::RideTicket applicant)
++{
++    for (const auto& pair : _lfgListQueue)
++        if (auto result = pair.second->GetApplicant(applicant.Id))
++            if (result->ApplicationTime == applicant.Time)
++                return  pair.second;
++
++    return nullptr;
++}
++
++void LFGListMgr::OnPlayerApplyForGroup(Player* player, WorldPackets::LFG::RideTicket const* applicationTicket, uint32 activityID, std::string comment, uint8 role)
++{
++    if (!sGroupFinderActivityStore.HasRecord(activityID))
++        return;
++
++    auto entry = GetEntrybyGuidLow(applicationTicket->Id);
++    if (!entry)
++        return;
++
++    LFGListEntry::LFGListApplicationEntry application(player->GetGUID().GetCounter(), entry);
++    application.ID = player->GetGUID().GetCounter();
++    application.RoleMask = role;
++    application.Comment = comment;
++
++    if (entry->ApplicationsContainer.find(application.ID) != entry->ApplicationsContainer.end())
++        return;
++
++    entry->ApplicationsContainer.insert(std::make_pair(application.ID, application));
++
++    auto applicationEntry = &entry->ApplicationsContainer.find(application.ID)->second;
++
++    applicationEntry->Status = CanQueueFor(applicationEntry->m_Owner, player);
++
++    if (applicationEntry->Status != LFGListStatus::None)
++        ChangeApplicantStatus(applicationEntry, LFGListApplicationStatus::Failed);
++    else
++    {
++        if (entry->AutoAccept)
++        {
++            if (!entry->ApplicationGroup->isRaidGroup() && GetMemeberCountInGroupIncludingInvite(entry) == 5)
++                ChangeApplicantStatus(applicationEntry, LFGListApplicationStatus::Applied); // Handled clientside -- OnAccept = function(self, applicantID) ConvertToRaid(); C_LFGList.InviteApplicant(applicantID) end,
++            else
++                ChangeApplicantStatus(applicationEntry, LFGListApplicationStatus::Invited);
++        }
++        else
++            ChangeApplicantStatus(applicationEntry, LFGListApplicationStatus::Applied);
++    }
++}
++
++LFGListEntry::LFGListApplicationEntry* LFGListMgr::GetApplicationByID(uint32 id)
++{
++    for (auto& group : _lfgListQueue)
++        for (auto& applicant : group.second->ApplicationsContainer)
++            if (applicant.first == id)
++                return &applicant.second;
++
++    return nullptr;
++}
++
++void LFGListMgr::ChangeApplicantStatus(LFGListEntry::LFGListApplicationEntry* application, LFGListApplicationStatus status, bool notify /* = true */)
++{
++    if (!application || application->ApplicationStatus == status)
++        return;
++
++    bool remove = false;
++    auto player = application->GetPlayer();
++    auto const& listEntry = application->m_Owner;
++
++    application->ApplicationStatus = status;
++
++    switch (status)
++    {
++        case LFGListApplicationStatus::Invited:
++            if (!listEntry->ApplicationGroup->isRaidGroup() && GetMemeberCountInGroupIncludingInvite(listEntry) >= 5 || player && CanQueueFor(listEntry, player) != LFGListStatus::None)
++                break;
++        case LFGListApplicationStatus::Applied:
++            application->ResetTimeout();
++            listEntry->ResetTimeout();
++
++            if (notify && player)
++                SendLfgListApplyForGroupResult(listEntry, application, player);
++            break;
++        case LFGListApplicationStatus::InviteDeclined:
++        case LFGListApplicationStatus::Declined:
++        case LFGListApplicationStatus::Cancelled:
++        case LFGListApplicationStatus::Timeout:
++        case LFGListApplicationStatus::Failed:
++        case LFGListApplicationStatus::DeclinedFull:
++        case LFGListApplicationStatus::DeclinedDelisted:
++            application->Listed = false;
++            remove = true;
++            if (notify && player)
++                SendLfgListApplicantGroupInviteResponse(application, player);
++            break;
++        case LFGListApplicationStatus::InviteAccepted:
++            if (!listEntry->ApplicationGroup->isRaidGroup() && GetMemeberCountInGroupIncludingInvite(listEntry) >= 5 || CanQueueFor(listEntry, player) != LFGListStatus::None)
++                break;
++
++            application->Listed = false;
++            remove = true;
++            listEntry->ApplicationGroup->AddMember(player);
++            listEntry->ApplicationGroup->SetLfgRoles(player->GetGUID(), application->RoleMask);
++            if (notify && player)
++                SendLfgListApplicantGroupInviteResponse(application, player);
++            SendSocialQueueUpdateNotify(listEntry, player);
++            break;
++        default:
++            break;
++    }
++
++    listEntry->BroadcastApplicantUpdate(application);
++
++    if (remove)
++        listEntry->ApplicationsContainer.erase(listEntry->ApplicationsContainer.find(application->ID));
++
++    // alistar: TODO
++    //AutoInviteApplicantsIfPossible(listEntry);
++}
++
++void LFGListMgr::RemoveAllApplicationsByPlayer(uint32 playerGUID, bool notify /* = false */)
++{
++    //@TODO totally wrong
++    while (auto application = GetApplicationByID(playerGUID))
++    {
++        ChangeApplicantStatus(application, LFGListApplicationStatus::DeclinedDelisted, notify);
++    }
++}
++
++uint8 LFGListMgr::GetApplicationCountByPlayer(ObjectGuid::LowType guidLow) const
++{
++    uint8 counter = 0;
++    for (auto& group : _lfgListQueue)
++        for (auto& applicant : group.second->ApplicationsContainer)
++            if (applicant.second.PlayerLowGuid == guidLow)
++                ++counter;
++
++    return counter;
++}
++
++void LFGListMgr::Update(uint32 const diff)
++{
++    std::lock_guard<std::recursive_mutex> _lock(m_lock);
++    for (auto itr = _lfgListQueue.begin(); itr != _lfgListQueue.end();)
++    {
++        if (!itr->second) // Prevent crash
++        {
++            _lfgListQueue.erase(itr);
++            itr = _lfgListQueue.begin();
++            continue;
++        }
++        if (!itr->second->Update(diff))
++        {
++            Remove((*itr).second->GetID());
++            itr = _lfgListQueue.begin();
++        }
++        else
++            ++itr;
++    }
++}
++
++void LFGListMgr::RemovePlayerDueToLogout(uint32 guidLow) ///< This is wrong, but cba to do it other way for now
++{
++    RemoveAllApplicationsByPlayer(guidLow);
++}
++
++void LFGListMgr::OnPlayerLogin(Player* player)
++{
++    if (auto group = player->GetGroup())
++        if (auto entry = GetEntrybyGuidLow(group->GetGUID().GetCounter()))
++            SendLFGListStatusUpdate(entry, player->GetSession());
++}
++
++LFGListStatus LFGListMgr::CanQueueFor(LFGListEntry* entry, Player* requestingPlayer, bool apply /* = true */)
++{
++    if (!requestingPlayer)
++        return LFGListStatus::None;
++
++    auto group = entry->ApplicationGroup;
++    auto activity = entry->GroupFinderActivityData;
++    auto iLvl = GetPlayerItemLevelForActivity(activity, requestingPlayer);
++
++    if (requestingPlayer->GetTeam() != group->GetTeam())
++        return LFGListStatus::LFG_LIST_STATUS_ERR_LFG_LIST_INVALID_SLOT;   ///< Shouldnt be a problem, because its only for filters
++
++    if ((activity->MinGearLevelSuggestion && iLvl < activity->MinGearLevelSuggestion) || iLvl < entry->ItemLevel)
++        return LFGListStatus::LFG_LIST_STATUS_ERR_LFG_LIST_INVALID_SLOT;   ///< Same as above, filtered out
++
++    if ((activity->MaxPlayers && static_cast<int32>(group->GetMembersCount()) >= activity->MaxPlayers) || group->GetMembersCount() >= 40)
++        return LFGListStatus::LFG_LIST_STATUS_ERR_LFG_LIST_TOO_MANY_MEMBERS;
++
++    if (requestingPlayer->GetLevel() < activity->MinLevel || (activity->MaxLevelSuggestion && requestingPlayer->GetLevel() > activity->MaxLevelSuggestion))
++        return LFGListStatus::LFG_LIST_STATUS_ERR_LFG_LIST_INVALID_SLOT;   ///< Filtered out
++
++    if (apply)
++        return LFGListStatus::None;
++
++    if (GetApplicationCountByPlayer(requestingPlayer->GetGUID().GetCounter()) >= LFG_LIST_MAX_APPLICATIONS)
++        return LFGListStatus::LFG_LIST_STATUS_ERR_LFG_LIST_REASON_TOO_MANY_LFG_LIST;
++
++    return LFGListStatus::None;
++}
++
++bool LFGListMgr::IsActivityPvP(GroupFinderActivityEntry const* activity) const
++{
++    if (!activity)
++        return false;
++
++    switch (activity->GroupFinderCategoryID)
++    {
++        case LFG_LIST_ACTIVITY_CATEGORY_ARENA:
++        case LFG_LIST_ACTIVITY_CATEGORY_ARENA_SKIRMISH:
++        case LFG_LIST_ACTIVITY_CATEGORY_BATTLEGROUNDS:
++        case LFG_LIST_ACTIVITY_CATEGORY_RATED_BATTLEGROUNDS:
++        case LFG_LIST_ACTIVITY_CATEGORY_OUTDOOR_PVP:
++            return true;
++        default:
++            return activity->ID == 17;    ///< Custom PvP
++    }
++}
++
++float LFGListMgr::GetPlayerItemLevelForActivity(GroupFinderActivityEntry const* activity, Player* player) const
++{
++    if (player == nullptr)
++        return 0.0f;
++
++    return 1.0; // alistar: TODO
++    //return player->GetFloatValue(PLAYER_FIELD_AVG_ITEM_LEVEL + (IsActivityPvP(activity) ? PlayerAvgItemLevelOffsets::PvPAvgItemLevel : PlayerAvgItemLevelOffsets::NonPvPAvgItemLevel));
++}
++
++float LFGListMgr::GetLowestItemLevelInGroup(LFGListEntry* entry) const
++{
++    return 1.0f;
++#if 0
++    auto minIlvl = 100000.0f;
++
++    for (auto ref = entry->ApplicationGroup->GetFirstMember(); ref != nullptr; ref = ref->next())
++        if (auto player = ref->getSource())
++            minIlvl = std::min(minIlvl, GetPlayerItemLevelForActivity(entry->GroupFinderActivityData, player));
++
++    return minIlvl != 100000.0f ? minIlvl : 0.0f;
++#endif
++}
++
++uint8 LFGListMgr::GetMemeberCountInGroupIncludingInvite(LFGListEntry* entry)
++{
++    return CountEntryApplicationsWithStatus(entry, LFGListApplicationStatus::InviteDeclined) + entry->ApplicationGroup->GetMembersCount();
++}
++
++uint8 LFGListMgr::CountEntryApplicationsWithStatus(LFGListEntry* entry, LFGListApplicationStatus status)
++{
++    return static_cast<uint8>(std::count_if(entry->ApplicationsContainer.begin(), entry->ApplicationsContainer.end(), [&](std::pair<uint32, LFGListEntry::LFGListApplicationEntry> const& itr)
++    {
++        return itr.second.ApplicationStatus == status;
++    }));
++}
++
++void LFGListMgr::AutoInviteApplicantsIfPossible(LFGListEntry* entry)
++{
++    if (!entry->AutoAccept)
++        return;
++
++    if (!entry->ApplicationGroup->isRaidGroup() && GetMemeberCountInGroupIncludingInvite(entry) >= 5)
++        return;
++
++    for (auto& applicant : entry->ApplicationsContainer)
++        if (CanQueueFor(entry, applicant.second.GetPlayer()) == LFGListStatus::None)
++            ChangeApplicantStatus(&applicant.second, LFGListApplicationStatus::Invited);
++}
++
++void LFGListMgr::SendLfgListJoinResult(LFGListEntry const* entry, LFGListStatus status, Player* player) const
++{
++    auto group = entry->ApplicationGroup;
++    if (!group)
++        return;
++
++#if 0
++    WorldPackets::LfgList::LfgListJoinResult result;
++    result.ApplicationTicket.RequesterGuid = group->GetGUID();
++    result.ApplicationTicket.Id = group->GetGUIDLow();
++    result.ApplicationTicket.Type = WorldPackets::LFG::RideType::LfgListApplication;
++    result.ApplicationTicket.Time = entry->CreationTime;
++    result.Status = AsUnderlyingType(status);
++    result.Result = 0;
++
++    player->SendDirectMessage(result.Write());
++#endif
++}
++
++void LFGListMgr::SendLfgListApplyForGroupResult(LFGListEntry const* lfgEntry, LFGListEntry::LFGListApplicationEntry const* application, Player* player)
++{
++    if (!player)
++        return;
++
++    auto group = lfgEntry->ApplicationGroup;
++    if (!group)
++        return;
++#if 1
++    WorldPackets::LfgList::LfgListApplyToGroupResponce responce;
++
++    responce.ApplicantTicket.RequesterGuid = ObjectGuid::Create<HighGuid::Player>(application->PlayerLowGuid);
++    responce.ApplicantTicket.Id = application->ID;
++    responce.ApplicantTicket.Type = WorldPackets::LFG::RideType::LfgListApplicant;
++    responce.ApplicantTicket.Time = application->ApplicationTime;
++
++    responce.InviteExpireTimer = application->Timeout;
++    responce.Status = AsUnderlyingType(LFGListStatus::Joined);
++    responce.Role = application->RoleMask;
++    responce.ApplicationStatus = AsUnderlyingType(application->ApplicationStatus);
++
++    auto activityID = lfgEntry->GroupFinderActivityData->ID;
++
++    responce.ApplicationTicket.RequesterGuid = group->GetGUID();
++    responce.ApplicationTicket.Id = group->GetGUID().GetCounter();
++    responce.ApplicationTicket.Type = WorldPackets::LFG::RideType::LfgListApplication;
++    responce.ApplicationTicket.Time = lfgEntry->CreationTime;
++
++    responce.SearchResult.ApplicationTicket.RequesterGuid = group->GetGUID();
++    responce.SearchResult.ApplicationTicket.Id = group->GetGUID().GetCounter();
++    responce.SearchResult.ApplicationTicket.Type = WorldPackets::LFG::RideType::LfgListApplication;
++    responce.SearchResult.ApplicationTicket.Time = lfgEntry->CreationTime;
++    responce.SearchResult.UnkGuid1 = group->GetLeaderGUID();
++    responce.SearchResult.UnkGuid2 = group->GetLeaderGUID();
++    responce.SearchResult.UnkGuid3 = group->GetLeaderGUID();
++    responce.SearchResult.UnkGuid4 = group->GetLeaderGUID();
++   // responce.SearchResult.BNetFriendsGuids = sSocialMgr->GetBNetFriendsGuids(activityID);
++    //responce.SearchResult.NumCharFriendsGuids = sSocialMgr->GetCharFriendsGuids(player, activityID);
++    //responce.SearchResult.NumGuildMateGuids = sSocialMgr->GetGuildMateGuids(activityID);
++    responce.SearchResult.VirtualRealmAddress = GetVirtualRealmAddress();
++    responce.SearchResult.CompletedEncounters = 0;
++    responce.SearchResult.ResultID = 3;
++    responce.SearchResult.Age = lfgEntry->CreationTime;
++    responce.SearchResult.ApplicationStatus = AsUnderlyingType(LFGListApplicationStatus::None);
++    responce.SearchResult.JoinRequest.ActivityID = activityID;
++    responce.SearchResult.JoinRequest.ItemLevel = lfgEntry->ItemLevel;
++    responce.SearchResult.JoinRequest.HonorLevel = lfgEntry->HonorLevel;
++    responce.SearchResult.JoinRequest.GroupName = lfgEntry->GroupName;
++    responce.SearchResult.JoinRequest.Comment = lfgEntry->Comment;
++    responce.SearchResult.JoinRequest.VoiceChat = lfgEntry->VoiceChat;
++    responce.SearchResult.JoinRequest.AutoAccept = lfgEntry->AutoAccept;
++    responce.SearchResult.JoinRequest.QuestID = lfgEntry->QuestID;
++
++    for (auto const& member : group->GetMemberSlots())
++    {
++        uint8 role = member.roles >= 2 ? std::log2(member.roles) - 1 : member.roles;
++        responce.SearchResult.Members.emplace_back(member.guid, member.level, member._class, member.roles);
++    }
++    //for (auto const& member : lfgEntry->ApplicationsContainer)
++    //    if (auto applicant = member.second.GetPlayer())
++    //        responce.SearchResult.Members.emplace_back(applicant->getClass(), member.second.RoleMask);
++
++    player->SendDirectMessage(responce.Write());
++#endif
++}
++
++void LFGListMgr::SendLfgListApplicantGroupInviteResponse(LFGListEntry::LFGListApplicationEntry const* applicant, Player* player)
++{
++#if 1
++    WorldPackets::LfgList::LfgListApplicantListUpdate responce;
++    responce.ApplicantTicket.RequesterGuid = ObjectGuid::Create<HighGuid::Player>(applicant->PlayerLowGuid);
++    responce.ApplicantTicket.Id = applicant->ID;
++    responce.ApplicantTicket.Type = WorldPackets::LFG::RideType::LfgListApplicant;
++    responce.ApplicantTicket.Time = applicant->ApplicationTime;
++
++    responce.ApplicationTicket.RequesterGuid = applicant->m_Owner->ApplicationGroup->GetGUID();
++    responce.ApplicationTicket.Id = applicant->m_Owner->ApplicationGroup->GetGUID().GetCounter();
++    responce.ApplicationTicket.Type = WorldPackets::LFG::RideType::LfgListApplication;
++    responce.ApplicationTicket.Time = applicant->m_Owner->CreationTime;
++
++   // responce.InviteExpireTimer = LFG_LIST_INVITE_TO_GROUP_TIMEOUT;
++    responce.Status = AsUnderlyingType(applicant->Status);
++    //responce.Role = applicant->RoleMask;
++    //responce.ApplicationStatus = AsUnderlyingType(applicant->ApplicationStatus);
++
++    WorldPacket data(OpcodeServer(SMSG_LFG_LIST_APPLICANT_LIST_UPDATE), 0);
++
++    data << responce.ApplicationTicket;
++    data << uint32(1);  // applicant count
++    data << uint32(60); // result?
++    data << responce.ApplicantTicket;
++    data << responce.ApplicantTicket.RequesterGuid;
++
++    data << uint32(0); // member count 0 for declining and invintg result?
++
++    TC_LOG_ERROR("", "{}", AsUnderlyingType(applicant->Status));
++
++    data.FlushBits();
++    data.WriteBits(5, 4);
++    data.WriteBit(false); // LISTED
++    data.WriteBits(0, 8); // text
++    data.FlushBits();
++
++    // TODO: comment..
++
++    player->SendDirectMessage(&data);
++#endif
++}
++
++void LFGListMgr::SendSocialQueueUpdateNotify(LFGListEntry const* lfgEntry, Player* player)
++{
++    auto group = lfgEntry->ApplicationGroup;
++
++#if 0
++    WorldPackets::Social::SocialQueueUpdateNotify notify;
++    notify.QueueID = 1;
++    notify.UnkBit = false;
++    notify.FriendGuid = player->GetGUID();
++    if (group)
++    {
++        notify.ApplicationGuid = group->GetGUID();
++        notify.ApplicationLeaderGuid = group->GetLeaderGUID();
++    }
++
++    WorldPackets::Social::SocialQueueUpdateData updateData;
++    updateData.Type = 1;
++    updateData.UnkBit = true;
++
++    switch (updateData.Type)
++    {
++        case 0:
++            //updateData.UnkData;
++            break;
++        case 1:
++        {
++            if (!group)
++                break;
++
++            WorldPackets::LfgList::ListSearchResult searchResult;
++            auto activityID = lfgEntry->GroupFinderActivityData->ID;
++            searchResult.ApplicationTicket.RequesterGuid = group->GetGUID();
++            searchResult.ApplicationTicket.Id = group->GetGUIDLow();
++            searchResult.ApplicationTicket.Type = WorldPackets::LFG::RideType::LfgListApplication;
++            searchResult.ApplicationTicket.Time = lfgEntry->CreationTime;
++            searchResult.UnkGuid1 = group->GetLeaderGUID();
++            searchResult.UnkGuid2 = group->GetLeaderGUID();
++            searchResult.UnkGuid3 = group->GetLeaderGUID();
++            searchResult.UnkGuid4 = group->GetLeaderGUID();
++            searchResult.BNetFriendsGuids = sSocialMgr->GetBNetFriendsGuids(activityID);
++            searchResult.NumCharFriendsGuids = sSocialMgr->GetCharFriendsGuids(player, activityID);
++            searchResult.NumGuildMateGuids = sSocialMgr->GetGuildMateGuids(activityID);
++            searchResult.VirtualRealmAddress = GetVirtualRealmAddress();
++            searchResult.CompletedEncounters = 0;
++            searchResult.Age = lfgEntry->CreationTime;
++            searchResult.ApplicationStatus = AsUnderlyingType(LFGListApplicationStatus::None);
++            searchResult.JoinRequest.ActivityID = activityID;
++            searchResult.JoinRequest.ItemLevel = lfgEntry->ItemLevel;
++            searchResult.JoinRequest.HonorLevel = lfgEntry->HonorLevel;
++            searchResult.JoinRequest.GroupName = lfgEntry->GroupName;
++            searchResult.JoinRequest.Comment = lfgEntry->Comment;
++            searchResult.JoinRequest.VoiceChat = lfgEntry->VoiceChat;
++            searchResult.JoinRequest.AutoAccept = lfgEntry->AutoAccept;
++            searchResult.JoinRequest.QuestID = lfgEntry->QuestID;
++
++            for (auto const& member : group->GetMemberSlots())
++            {
++                uint8 role = member.Roles >= 2 ? std::log2(member.Roles) - 1 : member.Roles;
++                searchResult.Members.emplace_back(member.Class, role);
++            }
++            break;
++        }
++        default:
++            //updateData.UnkData2;
++            break;
++    }
++
++    notify.SocialQueueUpdates.emplace_back(updateData);
++
++
++    if (lfgEntry->ApplicationGroup)
++        lfgEntry->ApplicationGroup->BroadcastPacket(notify.Write(), false);
++
++    sSocialMgr->BroadcastToFriendListers(player, notify.Write());
++
++#endif
++}
++
++void LFGListMgr::SendSocialQueueUpdateNotify(LFGListEntry const* lfgEntry)
++{
++    if (!lfgEntry || !lfgEntry->ApplicationGroup)
++        return;
++
++    auto player = ObjectAccessor::FindPlayer(lfgEntry->ApplicationGroup->GetLeaderGUID());
++    if (player)
++        SendSocialQueueUpdateNotify(lfgEntry, player);
++}
+diff --git forkSrcPrefix/src/server/game/GroupFinder/LFGListMgr.h forkDstPrefix/src/server/game/GroupFinder/LFGListMgr.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..01e93119e669e2e7e43ddcdc508c592bfa7e22da
+--- /dev/null
++++ forkDstPrefix/src/server/game/GroupFinder/LFGListMgr.h
+@@ -0,0 +1,50 @@
++#pragma once
++
++#include "LFGList.h"
++#include "LFGPacketsCommon.h"
++
++class LFGListMgr
++{
++public:
++    static LFGListMgr* instance();
++
++    LFGListMgr();
++
++    bool Insert(LFGListEntry* lfgEntry, Player* requester);
++    bool CanInsert(LFGListEntry const* lfgEntry, Player* requester, bool sendError = false) const;
++    bool IsEligibleForQueue(Player* player) const;
++    bool IsGroupQueued(Group const* group) const;
++    void SendLFGListStatusUpdate(LFGListEntry* lfgEntry, WorldSession* worldSession = nullptr, bool listed = true, LFGListStatus debugStatus = LFGListStatus::None);
++    bool Remove(ObjectGuid::LowType lowGuid, Player* requester = nullptr, bool disband = true);
++    void PlayerAddedToGroup(Player* player, Group* group);
++    void PlayerRemoveFromGroup(Player* player, Group* group);
++    std::list<LFGListEntry const*> GetFilteredList(uint32 activityCategory, uint32 activitySubCategory, std::string filterString, Player* player);
++    LFGListEntry* GetEntrybyGuidLow(ObjectGuid::LowType lowGuid);
++    LFGListEntry* GetEntryByApplicant(WorldPackets::LFG::RideTicket applicant);
++    void OnPlayerApplyForGroup(Player* player, WorldPackets::LFG::RideTicket const* applicationTicket, uint32 activityID, std::string comment, uint8 role);
++    void ChangeApplicantStatus(LFGListEntry::LFGListApplicationEntry* application, LFGListApplicationStatus status, bool notify = true);
++    LFGListEntry::LFGListApplicationEntry* GetApplicationByID(uint32 id);
++    void Update(uint32 const diff);
++    void RemovePlayerDueToLogout(uint32 guidLow);
++    void OnPlayerLogin(Player* player);
++    LFGListStatus CanQueueFor(LFGListEntry* entry, Player* requestingPlayer, bool apply = true);
++    void RemoveAllApplicationsByPlayer(uint32 playerGUID, bool notify = false);
++    bool IsActivityPvP(GroupFinderActivityEntry const* activity) const;
++    float GetPlayerItemLevelForActivity(GroupFinderActivityEntry const* activity, Player* player) const;
++    uint8 GetApplicationCountByPlayer(ObjectGuid::LowType guidLow) const;
++    float GetLowestItemLevelInGroup(LFGListEntry* entry) const;
++    uint8 GetMemeberCountInGroupIncludingInvite(LFGListEntry* entry);
++    uint8 CountEntryApplicationsWithStatus(LFGListEntry* entry, LFGListApplicationStatus status);
++    void AutoInviteApplicantsIfPossible(LFGListEntry* entry);
++
++    void SendLfgListJoinResult(LFGListEntry const* entry, LFGListStatus status, Player* player) const;
++    void SendLfgListApplyForGroupResult(LFGListEntry const* lfgEntry, LFGListEntry::LFGListApplicationEntry const* application, Player* player);
++    void SendLfgListApplicantGroupInviteResponse(LFGListEntry::LFGListApplicationEntry const* applicant, Player* player);
++    void SendSocialQueueUpdateNotify(LFGListEntry const* lfgEntry, Player* player);
++    void SendSocialQueueUpdateNotify(LFGListEntry const* lfgEntry);
++private:
++    std::map<ObjectGuid::LowType, LFGListEntry*> _lfgListQueue;
++    std::recursive_mutex m_lock;
++};
++
++#define sLFGListMgr LFGListMgr::instance()
+diff --git forkSrcPrefix/src/server/game/Groups/Group.cpp forkDstPrefix/src/server/game/Groups/Group.cpp
+index 1e1a1f28e66d50f8273062f94ffa96fbef2178e4..577fa8c96fc705714df3bb09f16435e7eb2cc07b 100644
+--- forkSrcPrefix/src/server/game/Groups/Group.cpp
++++ forkDstPrefix/src/server/game/Groups/Group.cpp
+@@ -41,7 +41,7 @@ Group::Group() : m_leaderGuid(), m_leaderFactionGroup(0), m_leaderName(""), m_gr
+ m_dungeonDifficulty(DIFFICULTY_NORMAL), m_raidDifficulty(DIFFICULTY_NORMAL_RAID), m_legacyRaidDifficulty(DIFFICULTY_10_N),
+ m_bgGroup(nullptr), m_bfGroup(nullptr), m_lootMethod(PERSONAL_LOOT), m_lootThreshold(ITEM_QUALITY_UNCOMMON), m_looterGuid(),
+ m_masterLooterGuid(), m_subGroupsCounts(nullptr), m_guid(), m_dbStoreId(0), m_isLeaderOffline(false),
+-m_readyCheckStarted(false), m_readyCheckTimer(Milliseconds::zero()), m_activeMarkers(0)
++m_readyCheckStarted(false), m_readyCheckTimer(Milliseconds::zero()), m_activeMarkers(0), _team(0)
+ {
+     for (uint8 i = 0; i < TARGET_ICONS_COUNT; ++i)
+         m_targetIcons[i].Clear();
+@@ -145,6 +145,8 @@ bool Group::Create(Player* leader)
+     m_raidDifficulty = DIFFICULTY_NORMAL_RAID;
+     m_legacyRaidDifficulty = DIFFICULTY_10_N;
+ 
++    _team = leader->GetTeam();
++
+     if (!isBGGroup() && !isBFGroup())
+     {
+         m_dungeonDifficulty = leader->GetDungeonDifficultyID();
+@@ -251,6 +253,7 @@ void Group::LoadMemberFromDB(ObjectGuid::LowType guidLow, uint8 memberFlags, uin
+     member.group        = subgroup;
+     member.flags        = memberFlags;
+     member.roles        = roles;
++    member.level        = character->Level;
+     member.readyChecked = false;
+ 
+     m_memberSlots.push_back(member);
+@@ -428,6 +431,7 @@ bool Group::AddMember(Player* player)
+     member.name         = player->GetName();
+     member.race         = Races(player->GetRace());
+     member._class       = player->GetClass();
++    member.level        = player->GetLevel();
+     member.group        = subGroup;
+     member.flags        = 0;
+     member.roles        = 0;
+diff --git forkSrcPrefix/src/server/game/Groups/Group.h forkDstPrefix/src/server/game/Groups/Group.h
+index 5358795efc6dc038f4e03851d86f6b0ece3caa18..dfd41d446a9f131829a1cdc33455325efd1ab625 100644
+--- forkSrcPrefix/src/server/game/Groups/Group.h
++++ forkDstPrefix/src/server/game/Groups/Group.h
+@@ -197,6 +197,7 @@ class TC_GAME_API Group
+             uint8       group;
+             uint8       flags;
+             uint8       roles;
++            uint8       level;
+             bool        readyChecked;
+         };
+         typedef std::list<MemberSlot> MemberSlotList;
+@@ -273,6 +274,8 @@ class TC_GAME_API Group
+         ObjectGuid GetMasterLooterGuid() const;
+         ItemQualities GetLootThreshold() const;
+ 
++        uint32 GetTeam() const { return _team; };
++
+         uint32 GetDbStoreId() const { return m_dbStoreId; }
+ 
+         // member manipulation methods
+@@ -423,5 +426,7 @@ class TC_GAME_API Group
+         // Raid markers
+         std::array<std::unique_ptr<RaidMarker>, RAID_MARKERS_COUNT> m_markers;
+         uint32              m_activeMarkers;
++
++        uint32              _team;
+ };
+ #endif
+diff --git forkSrcPrefix/src/server/game/Handlers/LfgListHandler.cpp forkDstPrefix/src/server/game/Handlers/LfgListHandler.cpp
+new file mode 100644
+index 0000000000000000000000000000000000000000..87cb3f844ad97293e6e3ba1f2bb9ee82675bdb2e
+--- /dev/null
++++ forkDstPrefix/src/server/game/Handlers/LfgListHandler.cpp
+@@ -0,0 +1,209 @@
++#include "WorldSession.h"
++#include "LFGListMgr.h"
++#include "Group.h"
++#include "LfgListPackets.h"
++#include "SocialMgr.h"
++#include "Chat.h"
++#include "GameTime.h"
++
++// temp??
++#include "LFGList.h"
++#include "ObjectAccessor.h"
++
++void WorldSession::HandleLfgListJoin(WorldPackets::LfgList::LfgListJoin& packet)
++{
++    auto list = new LFGListEntry;
++    list->GroupFinderActivityData = sGroupFinderActivityStore.LookupEntry(packet.Request.ActivityID);
++    list->ItemLevel = packet.Request.ItemLevel;
++    list->AutoAccept = packet.Request.AutoAccept;
++    list->GroupName = packet.Request.GroupName;
++    list->Comment = packet.Request.Comment;
++    list->VoiceChat = packet.Request.VoiceChat;
++    list->HonorLevel = packet.Request.HonorLevel;
++    if (packet.Request.QuestID.has_value())
++        list->QuestID = *packet.Request.QuestID;
++    list->ApplicationGroup = nullptr;
++    list->PrivateGroup = packet.Request.PrivateGroup;
++    sLFGListMgr->Insert(list, GetPlayer());
++}
++
++void WorldSession::HandleLfgListLeave(WorldPackets::LfgList::LfgListLeave& packet)
++{
++    auto entry = sLFGListMgr->GetEntrybyGuidLow(packet.ApplicationTicket.Id);
++    if (!entry || !entry->ApplicationGroup->IsLeader(GetPlayer()->GetGUID()))
++        return;
++
++    sLFGListMgr->Remove(packet.ApplicationTicket.Id, GetPlayer());
++}
++
++void WorldSession::HandleRequestLfgListBlackList(WorldPackets::LfgList::RequestLfgListBlacklist& /*request*/)
++{
++    SendPacket(WorldPackets::LfgList::LFGListUpdateBlacklist().Write());
++}
++
++void WorldSession::HandleLfgListUpdateRequest(WorldPackets::LfgList::LfgListUpdateRequest& packet)
++{
++    auto entry = sLFGListMgr->GetEntrybyGuidLow(packet.Ticket.Id);
++    if (!entry || !entry->ApplicationGroup->IsLeader(_player->GetGUID()))
++        return;
++
++    entry->AutoAccept = packet.UpdateRequest.AutoAccept;
++    entry->GroupName = packet.UpdateRequest.GroupName;
++    entry->Comment = packet.UpdateRequest.Comment;
++    entry->VoiceChat = packet.UpdateRequest.VoiceChat;
++    entry->HonorLevel = packet.UpdateRequest.HonorLevel;
++    if (packet.UpdateRequest.QuestID.has_value())
++        entry->QuestID = *packet.UpdateRequest.QuestID;
++
++    if (packet.UpdateRequest.ItemLevel < sLFGListMgr->GetPlayerItemLevelForActivity(entry->GroupFinderActivityData, _player))
++        entry->ItemLevel = packet.UpdateRequest.ItemLevel;
++    entry->PrivateGroup = packet.UpdateRequest.PrivateGroup;
++
++    sLFGListMgr->AutoInviteApplicantsIfPossible(entry);
++    sLFGListMgr->SendLFGListStatusUpdate(entry);
++}
++
++void WorldSession::HandleLfgListGetStatus(WorldPackets::LfgList::LfgListGetStatus& /*packet*/)
++{}
++
++void WorldSession::HandleLfgListApplyToGroup(WorldPackets::LfgList::LfgListApplyToGroup& packet)
++{
++    /*WorldPacket data(OpcodeServer(SMSG_LFG_LIST_UNKNOWN), 0);
++    data << uint32(0x02);
++    data << uint32(0);
++    data << _player->GetGUID();
++    data << packet.application.ApplicationTicket.RequesterGuid;
++    _player->GetSession()->SendPacket(&data, true);*/
++
++    if (GetPlayer()->GetGroup()) // hack, i don't know, how do it, because we need rolechek and result of rolecheck input there
++        ChatHandler(GetPlayer()->GetSession()).PSendSysMessage("You can't join it while you in group!");
++    else
++        sLFGListMgr->OnPlayerApplyForGroup(GetPlayer(), &packet.application.ApplicationTicket, packet.application.ActivityID, packet.application.Comment, packet.application.Role);
++
++    Player* sylea = ObjectAccessor::FindPlayerByName("Sylea");
++    WorldPackets::LfgList::LfgListApplicantListUpdate datax;
++    datax.ApplicationTicket = packet.application.ApplicationTicket;
++
++    WorldPackets::LFG::RideTicket ticket;
++    ticket.Id = _player->GetGUID().GetCounter();
++    ticket.RequesterGuid = _player->GetGUID();
++    ticket.Time = GameTime::GetGameTime();
++    ticket.Type = WorldPackets::LFG::RideType::LfgListApplicant;
++    ticket.Unknown925 = false;
++
++    datax.ApplicantTicket = ticket;
++    sylea->GetSession()->SendPacket(datax.Write(), true);
++}
++
++void WorldSession::HandleLfgListCancelApplication(WorldPackets::LfgList::LfgListCancelApplication& packet)
++{
++    if (auto entry = sLFGListMgr->GetEntryByApplicant(packet.ApplicantTicket))
++        sLFGListMgr->ChangeApplicantStatus(entry->GetApplicant(packet.ApplicantTicket.Id), LFGListApplicationStatus::Cancelled);
++}
++
++void WorldSession::HandleLfgListDeclineApplicant(WorldPackets::LfgList::LfgListDeclineApplicant& packet)
++{
++    if (!_player->GetGroup()->IsAssistant(_player->GetGUID()) && !_player->GetGroup()->IsLeader(_player->GetGUID()))
++        return;
++
++    if (auto entry = sLFGListMgr->GetEntrybyGuidLow(packet.ApplicantTicket.Id))
++        sLFGListMgr->ChangeApplicantStatus(entry->GetApplicant(packet.ApplicationTicket.Id), LFGListApplicationStatus::Declined);
++}
++
++void WorldSession::HandleLfgListSearch(WorldPackets::LfgList::LfgListSearch& request)
++{
++    WorldPackets::LfgList::LfgListSearchResults results;
++
++    // TODO:
++
++    const auto& list = sLFGListMgr->GetFilteredList(request.GroupFinderCategoryId, request.SearchFilterNum, "", GetPlayer());
++    //results.AppicationsCount = list.size();
++
++    for (const auto& lfgEntry : list)
++    {
++        WorldPackets::LfgList::LFGTEMP entry;
++
++        auto group = lfgEntry->ApplicationGroup;
++        if (!group)
++            continue;
++
++        entry.Ticket.Id = group->GetGUID().GetCounter();
++        entry.Ticket.RequesterGuid = group->GetGUID();
++        entry.Ticket.Type = WorldPackets::LFG::RideType::LfgListApplication;
++        entry.Ticket.Time = lfgEntry->CreationTime;
++
++        entry.SequenceNum = 14;
++        entry.Unk = 5;
++
++        entry.Leader               = group->GetLeaderGUID();
++        entry.LastTouchedAny       = group->GetLeaderGUID();
++        entry.LastTouchedName      = group->GetLeaderGUID();
++        entry.LastTouchedComment   = group->GetLeaderGUID();
++        entry.LastTouchedVoiceChat = group->GetLeaderGUID();
++
++        entry.VirtualRealmAddress = GetVirtualRealmAddress();
++
++        entry.Unk2 = 4395;
++
++        entry.BnetFriends = 0;
++        entry.CharFriends = 0;
++        entry.GuildMates = 0;
++        entry.Unk3 = 0;
++
++        entry.CompletedEncountersMask = 0;
++
++        entry.CreationTime = lfgEntry->CreationTime;
++
++        entry.MemberCount = group->GetMemberSlots().size();
++
++        entry.Unk4 = 0;
++        entry.Unk5 = 0;
++
++        entry.PartyGUID = group->GetGUID();
++
++        entry.GroupFinderActivityId = lfgEntry->GroupFinderActivityData->ID;
++
++        entry.RequiredItemLevel = lfgEntry->ItemLevel;
++        entry.RequiredHonorLevel = lfgEntry->HonorLevel;
++
++        entry.Unk15 = 0;
++
++        entry.AutoAccept = lfgEntry->AutoAccept;
++        entry.IsPrivate = lfgEntry->PrivateGroup;
++
++        if (lfgEntry->QuestID)
++            *entry.QuestID = lfgEntry->QuestID;
++
++        entry.Unk16 = 2;
++
++        entry.Name = lfgEntry->GroupName;
++        entry.Comment = lfgEntry->Comment;
++        entry.Voice = lfgEntry->VoiceChat;
++
++        entry.Unk8 = 0;
++        entry.Unk9 = 0;
++        entry.Unk10 = 0;
++        entry.Unk11 = 0;
++        entry.Unk12 = 0;
++
++        for (auto const& member : group->GetMemberSlots())
++        {
++            uint8 role = member.roles >= 2 ? std::log2(member.roles) - 1 : member.roles;
++
++            WorldPackets::LfgList::LFGMemberResult memberResult;
++            memberResult.Member = member.guid;
++            memberResult.Level = member.level;
++            memberResult.Class = member._class;
++            memberResult.Role = 1;
++            memberResult.Unk13 = 0;
++            memberResult.Unk14 = 32768;
++            entry.Members.push_back(memberResult);
++        }
++
++        results.Entries.emplace_back(entry); // TODO: move contstructor
++        break;
++    }
++
++    SendPacket(results.Write());
++}
++
+diff --git forkSrcPrefix/src/server/game/Server/Packets/AllPackets.h forkDstPrefix/src/server/game/Server/Packets/AllPackets.h
+index 8585f7beeeb03b9dfcb110bc8fdf0d5d0b270dc1..18860d341ccd172ea9a7cd303aad5a6c4e0c7351 100644
+--- forkSrcPrefix/src/server/game/Server/Packets/AllPackets.h
++++ forkDstPrefix/src/server/game/Server/Packets/AllPackets.h
+@@ -82,5 +82,6 @@
+ #include "WardenPackets.h"
+ #include "WhoPackets.h"
+ #include "WorldStatePackets.h"
++#include "LfgListPackets.h"
+ 
+ #endif // AllPackets_h__
+diff --git forkSrcPrefix/src/server/game/Server/Packets/LfgListPackets.cpp forkDstPrefix/src/server/game/Server/Packets/LfgListPackets.cpp
+new file mode 100644
+index 0000000000000000000000000000000000000000..27a0af19dbe3de0266053db7b316c39e54016e50
+--- /dev/null
++++ forkDstPrefix/src/server/game/Server/Packets/LfgListPackets.cpp
+@@ -0,0 +1,511 @@
++#include "LfgListPackets.h"
++
++
++#include <fstream>// temp
++#include "ObjectAccessor.h" // temp
++#include "Group.h" //temp
++
++ByteBuffer& operator<<(ByteBuffer& data, WorldPackets::LfgList::LFGListBlacklist const& blackList)
++{
++    data << blackList.ActivityID;
++    data << blackList.Reason;
++
++    return data;
++}
++
++ByteBuffer& operator>>(ByteBuffer& data, WorldPackets::LfgList::ListRequest& join)
++{
++    data >> join.ActivityID;
++
++    data >> join.ItemLevel;
++    data >> join.HonorLevel;
++
++    //data.ResetBitPos();
++    uint32 NameLen = data.ReadBits(10);
++    uint32 CommenteLen = data.ReadBits(11);
++    uint32 VoiceChatLen = data.ReadBits(8);
++    join.AutoAccept = data.ReadBit();
++    join.PrivateGroup = data.ReadBit();
++    bool isForQuest = data.ReadBit();
++
++    data.ReadBit();
++
++    join.GroupName = data.ReadString(NameLen);
++    join.Comment = data.ReadString(CommenteLen);
++    join.VoiceChat = data.ReadString(VoiceChatLen);
++
++    if (isForQuest)
++        data >> *join.QuestID;
++
++    return data;
++}
++
++ByteBuffer& operator<<(ByteBuffer& data, WorldPackets::LfgList::ListRequest const& join)
++{
++    data << join.ActivityID;
++
++    data << join.ItemLevel;
++    data << join.HonorLevel;
++
++    data.WriteBits(join.GroupName.length(), 10);
++    data.WriteBits(join.Comment.length(), 11);
++    data.WriteBits(join.VoiceChat.length(), 8);
++
++    data.WriteBit(1);
++
++    data.WriteBit(join.AutoAccept);
++    data.WriteBit(join.PrivateGroup);
++    data.WriteBit(join.QuestID.has_value() && *join.QuestID != 0);
++
++    data.FlushBits();
++
++    data.WriteString(join.GroupName);
++    data.WriteString(join.Comment);
++    data.WriteString(join.VoiceChat);
++
++    if (join.QuestID.has_value() && *join.QuestID != 0)
++        data << *join.QuestID;
++
++    return data;
++}
++
++ByteBuffer& operator<<(ByteBuffer& data, WorldPackets::LfgList::MemberInfo const& memberInfo)
++{
++    data << memberInfo.Member;
++    data << memberInfo.Level;
++    data << memberInfo.Class;
++    data << memberInfo.Role;
++    data << memberInfo.Unk13;
++    data << memberInfo.Unk14;
++
++    return data;
++}
++
++ByteBuffer& operator<<(ByteBuffer& data, WorldPackets::LfgList::ListSearchResult const& listSearch)
++{
++    data << listSearch.ApplicationTicket;
++    data << listSearch.ResultID;
++    data << listSearch.UnkGuid1;
++    data << listSearch.UnkGuid2;
++    data << listSearch.UnkGuid3;
++    data << listSearch.UnkGuid4;
++    data << listSearch.UnkGuid5;
++    data << listSearch.VirtualRealmAddress;
++    data << static_cast<uint32>(listSearch.BNetFriendsGuids.size());
++    data << static_cast<uint32>(listSearch.NumCharFriendsGuids.size());
++    data << static_cast<uint32>(listSearch.NumGuildMateGuids.size());
++    data << static_cast<uint32>(listSearch.Members.size());
++    data << listSearch.CompletedEncounters;
++    data << listSearch.Age;
++    data << listSearch.ApplicationStatus;
++
++    data << listSearch.UnkGuid5;
++
++    for (ObjectGuid const& v : listSearch.BNetFriendsGuids)
++        data << v;
++
++    for (ObjectGuid const& v : listSearch.NumCharFriendsGuids)
++        data << v;
++
++    for (ObjectGuid const& v : listSearch.NumGuildMateGuids)
++        data << v;
++
++    for (auto const& v : listSearch.Members)
++        data << v;
++
++    data << listSearch.JoinRequest;
++
++    return data;
++}
++
++void WorldPackets::LfgList::LfgListJoin::Read()
++{
++    _worldPacket >> Request;
++}
++
++void WorldPackets::LfgList::LfgListLeave::Read()
++{
++    _worldPacket >> ApplicationTicket;
++}
++
++WorldPacket const* WorldPackets::LfgList::LFGListUpdateBlacklist::Write()
++{
++    std::sort(Blacklist.begin(), Blacklist.end(), [](LFGListBlacklist const& a, LFGListBlacklist const& b) -> bool
++    {
++        return a.ActivityID < b.ActivityID;
++    });
++
++    _worldPacket << static_cast<uint32>(Blacklist.size());
++    for (auto const& map : Blacklist)
++        _worldPacket << map;
++
++    return &_worldPacket;
++}
++
++WorldPacket const* WorldPackets::LfgList::LfgListUpdateStatus::Write()
++{
++    _worldPacket << ApplicationTicket;
++    _worldPacket << ExpirationTime;
++    _worldPacket << int32(0); // unknown
++    _worldPacket << Status;
++    _worldPacket << Request;
++    _worldPacket.WriteBit(Listed);
++    _worldPacket.FlushBits();
++
++    return &_worldPacket;
++}
++
++WorldPacket const* WorldPackets::LfgList::LfgListApplyToGroupResponce::Write()
++{
++    _worldPacket << ApplicantTicket;
++
++    _worldPacket << InviteExpireTimer;
++
++    _worldPacket << int32(0);
++    _worldPacket << int16(6);
++
++    _worldPacket << ApplicationTicket;
++
++    _worldPacket << uint8(16); // dunno
++
++    _worldPacket << SearchResult.ApplicationTicket;
++
++    _worldPacket << int32(14);
++    _worldPacket << int8(0);
++
++    _worldPacket << SearchResult.UnkGuid1;
++    _worldPacket << SearchResult.UnkGuid2;
++    _worldPacket << SearchResult.UnkGuid3;
++    _worldPacket << SearchResult.UnkGuid4;
++    _worldPacket << SearchResult.UnkGuid4; // Voice
++
++    _worldPacket << SearchResult.VirtualRealmAddress;
++
++    _worldPacket << int32(1637);
++
++    _worldPacket << uint32(0);
++    _worldPacket << uint32(0);
++    _worldPacket << uint32(0);
++    _worldPacket << uint32(0); // Unk3
++
++    _worldPacket << uint32(SearchResult.Members.size());
++
++    _worldPacket << uint32(SearchResult.CompletedEncounters);
++    _worldPacket << uint32(ApplicationTicket.Time); // CreationTime
++    _worldPacket << uint32(0);
++    _worldPacket << uint8(0);
++
++    _worldPacket << ApplicationTicket.RequesterGuid;
++
++    for (int i = 0; i < 7; ++i)
++    {
++        _worldPacket << uint32(0);
++        _worldPacket << uint8(255);
++    }
++
++    _worldPacket << int32(0); // Type
++
++    _worldPacket << SearchResult.JoinRequest;
++
++    _worldPacket << uint8(8);
++    _worldPacket << int32(0);
++    _worldPacket << int32(0);
++    _worldPacket << int32(0);
++    _worldPacket << int8(0);
++
++    for (auto const& v : SearchResult.Members)
++        _worldPacket << v;
++
++    /*
++     packet.ReadByte("Unk8");
++                packet.ReadInt32("Unk9");
++                packet.ReadInt32("Unk10");
++                packet.ReadInt32("Unk11");
++                packet.ReadByte("Unk12");
++
++
++                for (int i = 0; i < memberCount; i++)
++                    ReadLfgListSearchResultMemberInfo(packet, "Members", i);
++    */
++
++
++   // _worldPacket << SearchResult;
++
++    //_worldPacket << Status;
++    //_worldPacket << Role;
++    //_worldPacket.WriteBits(ApplicationStatus, 4);
++    //_worldPacket.FlushBits();
++
++    return &_worldPacket;
++}
++
++WorldPacket const* WorldPackets::LfgList::LfgListGroupInviteResponce::Write()
++{
++    _worldPacket << ApplicantTicket;
++    _worldPacket << uint8(0);
++    _worldPacket << uint8(0);
++    //_worldPacket << ApplicationTicket;
++    //_worldPacket << InviteExpireTimer;
++    //_worldPacket << Status;
++    //_worldPacket << Role;
++    //_worldPacket.WriteBits(ApplicationStatus, 4);
++    //_worldPacket.FlushBits();
++
++    return &_worldPacket;
++}
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++
++void WorldPackets::LfgList::LfgListSearch::Read()
++{
++    SearchFilterNum = _worldPacket.ReadBits(6);
++    _worldPacket >> GroupFinderCategoryId;
++    _worldPacket >> SubActivityGroupID;
++    _worldPacket >> LFGListFilter;
++    _worldPacket >> LanguageFilter;
++}
++
++WorldPacket const* WorldPackets::LfgList::LfgListSearchResults::Write()
++{
++    _worldPacket << uint16(Entries.size());
++    _worldPacket << uint32(Entries.size());
++
++    for (const auto& entry : Entries)
++    {
++        _worldPacket << entry.Ticket;
++
++        _worldPacket << uint32(entry.SequenceNum);
++
++        _worldPacket << uint8(entry.Unk);
++
++        _worldPacket << entry.Leader;
++        _worldPacket << entry.LastTouchedAny;
++        _worldPacket << entry.LastTouchedName;
++        _worldPacket << entry.LastTouchedComment;
++        _worldPacket << entry.LastTouchedVoiceChat;
++
++        _worldPacket << uint32(entry.VirtualRealmAddress);
++
++        _worldPacket << uint32(entry.Unk2);
++        _worldPacket << uint32(entry.BnetFriends);
++        _worldPacket << uint32(entry.CharFriends);
++        _worldPacket << uint32(entry.GuildMates);
++        _worldPacket << uint32(entry.Unk3);
++        _worldPacket << uint32(entry.MemberCount);
++
++        _worldPacket << uint32(entry.CompletedEncountersMask);
++        _worldPacket << uint32(entry.CreationTime);
++        _worldPacket << uint32(entry.Unk4);
++        _worldPacket << uint8(entry.Unk5);
++
++        _worldPacket << entry.PartyGUID;
++
++        // TODO:
++#if 0
++        for (uint8 i = 0; i < entry.BnetFriends; i++)
++            _worldPacket << GUID;
++
++        for (uint8 i = 0; i < entry.CharFriends; i++)
++            _worldPacket << GUID;
++
++        for (uint8 i = 0; i < entry.GuildMates; i++)
++            _worldPacket << GUID;
++#endif
++
++        for (uint8 i = 0; i != entry.Unknown.size(); ++i)
++        {
++            _worldPacket << uint32(entry.Unknown[i].Unk6);
++            _worldPacket << uint8(entry.Unknown[i].Unk7);
++        }
++
++        // Lfg join request
++        {
++            _worldPacket << int32(0x5);
++
++            _worldPacket << int32(entry.GroupFinderActivityId);
++
++            std::ifstream fs;
++            fs.open("test.txt");
++
++            int32 num = 0;
++
++            if (fs.is_open())
++            {
++                std::string out;
++                while (std::getline(fs, out))
++                {
++                    num = std::stoi(out);
++                    break;
++                }
++            }
++
++            // This is very hard for me to do without reversing knowledge
++            // They bitshift the ilvl
++            _worldPacket << int32(num); // entry.RequiredItemLevel
++
++            _worldPacket << int32(entry.RequiredHonorLevel);
++
++            _worldPacket.WriteBits(entry.Name.size(), 10);
++            _worldPacket.WriteBits(entry.Comment.size(), 11);
++            _worldPacket.WriteBits(entry.Voice.size(), 8);
++
++            _worldPacket.WriteBit(entry.AutoAccept);
++            _worldPacket.WriteBit(entry.IsPrivate);
++            _worldPacket.WriteBit(entry.QuestID.has_value());
++
++            _worldPacket.FlushBits();
++
++            _worldPacket << uint8(entry.Unk16);
++
++            _worldPacket.WriteString(entry.Name);
++            _worldPacket.WriteString(entry.Comment);
++            _worldPacket.WriteString(entry.Voice);
++
++            if (entry.QuestID.has_value())
++                _worldPacket << uint32(*entry.QuestID);
++        }
++
++        _worldPacket << uint8(entry.Unk8);
++        _worldPacket << int32(entry.Unk9);
++        _worldPacket << int32(entry.Unk10);
++        _worldPacket << int32(entry.Unk11);
++        _worldPacket << uint8(entry.Unk12);
++
++        for (uint8 i = 0; i != entry.Members.size(); ++i)
++        {
++            _worldPacket << entry.Members[i].Member;
++            _worldPacket << uint8(entry.Members[i].Level);
++            _worldPacket << uint8(entry.Members[i].Class);
++            _worldPacket << uint8(entry.Members[i].Role);
++
++            _worldPacket << uint32(entry.Members[i].Unk13);
++            _worldPacket << uint16(entry.Members[i].Unk14);
++        }
++    }
++
++    return &_worldPacket;
++}
++
++void WorldPackets::LfgList::LfgListUpdateRequest::Read()
++{
++    _worldPacket >> Ticket;
++    _worldPacket >> UpdateRequest;
++}
++
++void WorldPackets::LfgList::LfgListApplyToGroup::Read()
++{
++    _worldPacket >> application.ApplicationTicket;
++    _worldPacket >> application.ActivityID;
++    application.Role = _worldPacket.read<uint8>();
++    application.Comment = _worldPacket.ReadString(_worldPacket.ReadBits(8));
++}
++
++void WorldPackets::LfgList::LfgListCancelApplication::Read()
++{
++    _worldPacket >> ApplicantTicket;
++}
++
++void WorldPackets::LfgList::LfgListDeclineApplicant::Read()
++{
++    _worldPacket >> ApplicantTicket;
++    _worldPacket >> ApplicationTicket;
++}
++
++WorldPacket const* WorldPackets::LfgList::LfgListApplicationUpdate::Write()
++{
++    _worldPacket << ApplicantTicket;
++
++    int32 unk0 { 0 }, unk1 {0};
++    int16 unk2 { 2108 };
++
++    _worldPacket << unk0;
++    _worldPacket << unk1;
++    _worldPacket << unk2;
++
++    _worldPacket << ApplicationTicket;
++
++    _worldPacket << uint8(ApplicationStatus);
++
++    return &_worldPacket;
++}
++#include "LFGMgr.h"
++#include "GameTime.h"
++WorldPacket const* WorldPackets::LfgList::LfgListApplicantListUpdate::Write()
++{
++    //Player* sylea = ObjectAccessor::FindPlayerByName("Sylea");
++    //Player* jed = ObjectAccessor::FindPlayerByName("Jed");
++    
++    //auto ticket = sLFGMgr->GetTicket(sylea->GetGUID());
++
++    _worldPacket << ApplicationTicket;
++
++    _worldPacket << uint32(1);
++    _worldPacket << uint32(6);
++
++    _worldPacket << ApplicantTicket;
++    /*_worldPacket << jed->GetGUID();
++    _worldPacket << uint32(jed->GetGUID().GetCounter());
++    _worldPacket << uint32(6);
++    _worldPacket << GameTime::GetGameTime();
++    _worldPacket.WriteBit(false);
++    _worldPacket.FlushBits();*/
++
++    _worldPacket << ApplicantTicket.RequesterGuid;
++    _worldPacket << uint32(1);
++
++    _worldPacket << uint8(0x18);
++    _worldPacket << uint8(0x18);
++
++    _worldPacket << ApplicantTicket.RequesterGuid;
++
++    _worldPacket << uint32(GetVirtualRealmAddress());
++
++    _worldPacket << uint32(80);
++    _worldPacket << uint32(0);
++    _worldPacket << uint32(1342177288);
++    _worldPacket << uint32(1067729786);
++    _worldPacket << uint32(17281);
++    _worldPacket << uint16(0);
++
++    for (int i = 0; i != 7; ++i)
++    {
++        _worldPacket << uint32(0);
++        _worldPacket << uint8(0xFF);
++    }
++
++    _worldPacket << uint32(1211001008);
++    _worldPacket << uint32(32630);
++
++    _worldPacket << uint32(0);
++    _worldPacket << uint32(0);
++    _worldPacket << uint32(0);
++
++    _worldPacket << uint8(0);
++    _worldPacket << uint8(0);
++    _worldPacket << uint8(0);
++
++    return &_worldPacket;
++}
+diff --git forkSrcPrefix/src/server/game/Server/Packets/LfgListPackets.h forkDstPrefix/src/server/game/Server/Packets/LfgListPackets.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..4ab479ada783f8327a4da1e9b7663ed001744582
+--- /dev/null
++++ forkDstPrefix/src/server/game/Server/Packets/LfgListPackets.h
+@@ -0,0 +1,353 @@
++#ifndef LfgListPackets_h__
++#define LfgListPackets_h__
++
++#include "Packet.h"
++#include "PacketUtilities.h"
++#include "LFGPacketsCommon.h"
++#include "Optional.h"
++#include "LFGList.h"
++
++namespace WorldPackets
++{
++    namespace LfgList
++    {
++        //------------------------------------------------------------------------
++        // Structs
++        struct LFGListBlacklist
++        {
++            uint32 ActivityID = 0;
++            uint32 Reason = 0;
++        };
++
++        struct ListRequest
++        {
++            ListRequest() = default;
++
++            Optional<uint32> QuestID;
++            uint32 ActivityID = 0;
++            uint32 HonorLevel = 0;
++            float ItemLevel = 0.0f;
++            std::string GroupName;
++            std::string Comment;
++            std::string VoiceChat;
++            bool AutoAccept = false;
++            bool PrivateGroup = false;
++        };
++
++        struct ApplicationToGroup
++        {
++            LFG::RideTicket ApplicationTicket;
++            uint32 ActivityID = 0;
++            std::string Comment;
++            uint8 Role = 0;
++        };
++
++        struct MemberInfo
++        {
++            MemberInfo() {}
++            MemberInfo(ObjectGuid guid, uint8 level, uint8 classID, uint8 role) 
++                : Member(guid), Level(level), Class(classID), Role(role) {}
++
++            ObjectGuid Member;
++            uint8 Level = 1;
++            uint8 Class = CLASS_WARRIOR;
++            uint8 Role = 0;
++            uint32 Unk13 = 0;
++            uint16 Unk14 = 0;
++        };
++
++        struct ListSearchResult
++        {
++            LFG::RideTicket ApplicationTicket;
++            ListRequest JoinRequest;
++            std::vector<MemberInfo> Members;
++            GuidList BNetFriendsGuids;
++            GuidList NumCharFriendsGuids;
++            GuidList NumGuildMateGuids;
++            ObjectGuid UnkGuid1;
++            ObjectGuid UnkGuid2;
++            ObjectGuid UnkGuid3;
++            ObjectGuid UnkGuid4;
++            ObjectGuid UnkGuid5;
++            uint32 VirtualRealmAddress = 0;
++            uint32 CompletedEncounters = 0;
++            uint32 Age = 0;
++            uint32 ResultID = 0;
++            uint8 ApplicationStatus = 0;
++        };
++
++        //------------------------------------------------------------------------
++        // Client Packets
++        class LfgListJoin final : public ClientPacket
++        {
++        public:
++            LfgListJoin(WorldPacket&& packet) : ClientPacket(CMSG_LFG_LIST_JOIN, std::move(packet)) {}
++
++            void Read() override;
++
++            ListRequest Request;
++        };
++
++        class LfgListLeave final : public ClientPacket
++        {
++        public:
++            LfgListLeave(WorldPacket&& packet) : ClientPacket(CMSG_LFG_LIST_LEAVE, std::move(packet)) {}
++
++            void Read() override;
++
++            LFG::RideTicket ApplicationTicket;
++        };
++
++        class RequestLfgListBlacklist final : public ClientPacket
++        {
++        public:
++            RequestLfgListBlacklist(WorldPacket&& packet) : ClientPacket(CMSG_REQUEST_LFG_LIST_BLACKLIST, std::move(packet)) { }
++
++            void Read() override { };
++        };
++
++        class LfgListUpdateRequest final : public ClientPacket
++        {
++        public:
++            LfgListUpdateRequest(WorldPacket&& packet) : ClientPacket(CMSG_LFG_LIST_UPDATE_REQUEST, std::move(packet)) {}
++
++            void Read() override;
++
++            LFG::RideTicket Ticket;
++            ListRequest UpdateRequest;
++        };
++
++        class LfgListGetStatus final : public ClientPacket
++        {
++        public:
++            LfgListGetStatus(WorldPacket&& packet) : ClientPacket(CMSG_LFG_LIST_GET_STATUS, std::move(packet)) {}
++
++            void Read() override {}
++        };
++
++        class LfgListApplyToGroup final : public ClientPacket
++        {
++        public:
++            LfgListApplyToGroup(WorldPacket&& packet) : ClientPacket(CMSG_LFG_LIST_APPLY_TO_GROUP, std::move(packet)) {}
++
++            void Read() override;
++
++            ApplicationToGroup application;
++        };
++
++        class LfgListCancelApplication final : public ClientPacket
++        {
++        public:
++            LfgListCancelApplication(WorldPacket&& packet) : ClientPacket(CMSG_LFG_LIST_CANCEL_APPLICATION, std::move(packet)) {}
++
++            void Read() override;
++
++            LFG::RideTicket ApplicantTicket;
++        };
++
++        class LfgListDeclineApplicant final : public ClientPacket
++        {
++        public:
++            LfgListDeclineApplicant(WorldPacket&& packet) : ClientPacket(CMSG_LFG_LIST_DECLINE_APPLICANT, std::move(packet)) {}
++
++            void Read() override;
++
++            LFG::RideTicket ApplicantTicket;
++            LFG::RideTicket ApplicationTicket;
++        };
++
++
++
++
++
++
++
++
++        struct LFGUnk
++        {
++            uint32 Unk6 = 0;
++            uint8 Unk7 = 255;
++        };
++
++        struct LFGMemberResult
++        {
++            ObjectGuid Member;
++            uint8 Level = 1;
++            uint8 Class = CLASS_WARRIOR;
++            uint8 Role = 0;
++            uint32 Unk13 = 0;
++            uint16 Unk14 = 0;
++        };
++
++        struct LFGTEMP
++        {
++            WorldPackets::LFG::RideTicket Ticket;
++
++            uint32 SequenceNum = 0;
++            uint8 Unk = 0;
++            ObjectGuid Leader;
++            ObjectGuid LastTouchedAny;
++            ObjectGuid LastTouchedName;
++            ObjectGuid LastTouchedComment;
++            ObjectGuid LastTouchedVoiceChat;
++            uint32 VirtualRealmAddress = 0;
++            uint32 Unk2 = 0;
++            uint32 BnetFriends = 0;
++            uint32 CharFriends = 0;
++            uint32 GuildMates = 0;
++            uint32 Unk3 = 0;
++            uint32 MemberCount = 0;
++            uint32 CompletedEncountersMask = 0;
++            uint32 CreationTime = 0;
++            uint32 Unk4 = 0;
++            uint8 Unk5 = 0;
++            ObjectGuid PartyGUID;
++
++            std::array<LFGUnk, 7> Unknown;
++
++            int32 GroupFinderActivityId = 0;
++            uint32 RequiredItemLevel = 0;
++            uint32 RequiredHonorLevel = 0;
++            uint32 Unk15 = 0;
++
++            std::string Name;
++            std::string Comment;
++            std::string Voice;
++
++            bool AutoAccept = false;
++            bool IsPrivate = false;
++
++            uint8 Unk16 = 0;
++
++            Optional<uint32> QuestID;
++
++            uint8 Unk8 = 0;
++            int32 Unk9 = 0;
++            int32 Unk10 = 0;
++            int32 Unk11 = 0;
++            uint8 Unk12 = 0;
++
++            std::vector<LFGMemberResult> Members;
++        };
++
++
++
++      
++
++        class LfgListSearch final : public ClientPacket
++        {
++        public:
++            LfgListSearch(WorldPacket&& packet) : ClientPacket(CMSG_LFG_LIST_SEARCH, std::move(packet)) {}
++
++            void Read() override;
++
++            uint32 SearchFilterNum = 0;
++            int32 GroupFinderCategoryId = 0;
++            int32 SubActivityGroupID = 0;
++            int32 LFGListFilter = 0;
++            uint32 LanguageFilter = 0;
++        };
++
++        //------------------------------------------------------------------------
++        // Server Packets
++
++        class LfgListSearchResults final : public ServerPacket
++        {
++        public:
++            LfgListSearchResults() : ServerPacket(SMSG_LFG_LIST_SEARCH_RESULTS, 250) {}
++
++            WorldPacket const* Write() override;
++
++            std::vector<LFGTEMP> Entries;
++        };
++
++        class LFGListUpdateBlacklist final : public ServerPacket
++        {
++        public:
++            LFGListUpdateBlacklist() : ServerPacket(SMSG_LFG_LIST_UPDATE_BLACKLIST, 12) {}
++
++            WorldPacket const* Write() override;
++
++            std::vector<LFGListBlacklist> Blacklist;
++        };
++
++        class LfgListUpdateStatus final : public ServerPacket
++        {
++        public:
++            LfgListUpdateStatus() : ServerPacket(SMSG_LFG_LIST_UPDATE_STATUS, 28 + 1 + 1 + 4 + 4 + 2 + 2 + 2) {}
++
++            WorldPacket const* Write() override;
++
++            LFG::RideTicket ApplicationTicket;
++            ListRequest Request;
++            uint32 ExpirationTime = 0;
++            uint8 Status = 0;
++            bool Listed = false;
++        };
++
++        // SMSG_LFG_LIST_APPLY_TO_GROUP_RESULT
++
++        class LfgListApplyToGroupResponce final : public ServerPacket
++        {
++        public:
++            LfgListApplyToGroupResponce() : ServerPacket(SMSG_LFG_LIST_APPLY_TO_GROUP_RESULT, 28 + 28 + 4 + 4 + 1 + 1 + 150) {}
++
++            WorldPacket const* Write() override;
++
++            ListSearchResult SearchResult;
++            LFG::RideTicket ApplicantTicket;
++            LFG::RideTicket ApplicationTicket;
++            uint32 InviteExpireTimer = 0;
++            uint8 Status = 0;
++            uint8 Role = 0;
++            uint8 ApplicationStatus = 0;
++        };
++
++        class LfgListGroupInviteResponce final : public ServerPacket
++        {
++        public:
++            LfgListGroupInviteResponce() : ServerPacket(SMSG_LFG_LIST_JOIN_RESULT, 28 + 28 + 4 + 4 + 1 + 1) {}
++
++            WorldPacket const* Write() override;
++
++            LFG::RideTicket ApplicantTicket;
++            LFG::RideTicket ApplicationTicket;
++            uint32 InviteExpireTimer = 0;
++            uint8 Status = 0;
++            uint8 Role = 0;
++            uint8 ApplicationStatus = 0;
++        };
++
++        class LfgListApplicationUpdate final : public ServerPacket
++        {
++        public:
++            LfgListApplicationUpdate() : ServerPacket(SMSG_LFG_LIST_APPLICATION_STATUS_UPDATE, 4 + 4 + 4) {}
++
++            WorldPacket const* Write() override;
++
++            LFG::RideTicket ApplicantTicket;
++            LFG::RideTicket ApplicationTicket;
++            LFGListApplicationStatus ApplicationStatus = LFGListApplicationStatus::None;
++        };
++
++        class LfgListApplicantListUpdate final : public ServerPacket
++        {
++        public:
++            LfgListApplicantListUpdate() : ServerPacket(SMSG_LFG_LIST_APPLICANT_LIST_UPDATE, 4 + 4 + 4) {}
++
++            WorldPacket const* Write() override;
++
++            LFG::RideTicket ApplicationTicket;
++            LFG::RideTicket ApplicantTicket;
++            uint8 Status = 0;
++            bool Listed = false;
++        };
++    }
++}
++
++ByteBuffer& operator<<(ByteBuffer& data, WorldPackets::LfgList::ListRequest const& join);
++ByteBuffer& operator>>(ByteBuffer& data, WorldPackets::LfgList::ListRequest& join);
++ByteBuffer& operator<<(ByteBuffer& data, WorldPackets::LfgList::ListSearchResult const& listSearch);
++ByteBuffer& operator<<(ByteBuffer& data, WorldPackets::LfgList::MemberInfo const& memberInfo);
++
++#endif
+\ No newline at end of file
+diff --git forkSrcPrefix/src/server/game/Server/Packets/LFGPacketsCommon.h forkDstPrefix/src/server/game/Server/Packets/LFGPacketsCommon.h
+index 2244b7dcd31d3becb03b6238553a4a8a234457b0..91384b9ae8db46e86ea317d7221b898d0426b8f3 100644
+--- forkSrcPrefix/src/server/game/Server/Packets/LFGPacketsCommon.h
++++ forkDstPrefix/src/server/game/Server/Packets/LFGPacketsCommon.h
+@@ -27,9 +27,11 @@ namespace WorldPackets
+     {
+         enum class RideType : uint32
+         {
+-            None = 0,
+-            Battlegrounds = 1,
+-            Lfg = 2
++            None               = 0,
++            Battlegrounds      = 1,
++            Lfg                = 2,
++            LfgListApplication = 4, // LFGListParty
++            LfgListApplicant   = 6, // LFGListPlayer
+         };
+ 
+         struct RideTicket
+diff --git forkSrcPrefix/src/server/game/Server/Protocol/Opcodes.cpp forkDstPrefix/src/server/game/Server/Protocol/Opcodes.cpp
+index 64d82901c0e6440cc7b3e18ef6686335bce6e86c..b846e0bbba8775350647d08ed7cba9a428e0e3f2 100644
+--- forkSrcPrefix/src/server/game/Server/Protocol/Opcodes.cpp
++++ forkDstPrefix/src/server/game/Server/Protocol/Opcodes.cpp
+@@ -560,17 +560,17 @@ void OpcodeTable::Initialize()
+     DEFINE_HANDLER(CMSG_LEARN_TALENT,                                       STATUS_LOGGEDIN,  PROCESS_THREADUNSAFE, &WorldSession::HandleLearnTalentOpcode);
+     DEFINE_HANDLER(CMSG_LEAVE_GROUP,                                        STATUS_LOGGEDIN,  PROCESS_THREADUNSAFE, &WorldSession::HandleLeaveGroupOpcode);
+     DEFINE_HANDLER(CMSG_LEAVE_PET_BATTLE_QUEUE,                             STATUS_UNHANDLED, PROCESS_INPLACE,      &WorldSession::Handle_NULL);
+-    DEFINE_HANDLER(CMSG_LFG_LIST_APPLY_TO_GROUP,                            STATUS_UNHANDLED, PROCESS_THREADUNSAFE, &WorldSession::Handle_NULL);
+-    DEFINE_HANDLER(CMSG_LFG_LIST_CANCEL_APPLICATION,                        STATUS_UNHANDLED, PROCESS_THREADUNSAFE, &WorldSession::Handle_NULL);
+-    DEFINE_HANDLER(CMSG_LFG_LIST_DECLINE_APPLICANT,                         STATUS_UNHANDLED, PROCESS_THREADUNSAFE, &WorldSession::Handle_NULL);
+-    DEFINE_HANDLER(CMSG_LFG_LIST_GET_STATUS,                                STATUS_UNHANDLED, PROCESS_THREADUNSAFE, &WorldSession::Handle_NULL);
++    DEFINE_HANDLER(CMSG_LFG_LIST_APPLY_TO_GROUP,                            STATUS_LOGGEDIN,  PROCESS_THREADUNSAFE, &WorldSession::HandleLfgListApplyToGroup);
++    DEFINE_HANDLER(CMSG_LFG_LIST_CANCEL_APPLICATION,                        STATUS_LOGGEDIN,  PROCESS_THREADUNSAFE, &WorldSession::HandleLfgListCancelApplication);
++    DEFINE_HANDLER(CMSG_LFG_LIST_DECLINE_APPLICANT,                         STATUS_LOGGEDIN,  PROCESS_THREADUNSAFE, &WorldSession::HandleLfgListDeclineApplicant);
++    DEFINE_HANDLER(CMSG_LFG_LIST_GET_STATUS,                                STATUS_LOGGEDIN,  PROCESS_THREADUNSAFE, &WorldSession::HandleLfgListGetStatus);
+     DEFINE_HANDLER(CMSG_LFG_LIST_INVITE_APPLICANT,                          STATUS_UNHANDLED, PROCESS_THREADUNSAFE, &WorldSession::Handle_NULL);
+     DEFINE_HANDLER(CMSG_LFG_LIST_INVITE_RESPONSE,                           STATUS_UNHANDLED, PROCESS_THREADUNSAFE, &WorldSession::Handle_NULL);
+-    DEFINE_HANDLER(CMSG_LFG_LIST_JOIN,                                      STATUS_UNHANDLED, PROCESS_THREADUNSAFE, &WorldSession::Handle_NULL);
+-    DEFINE_HANDLER(CMSG_LFG_LIST_LEAVE,                                     STATUS_UNHANDLED, PROCESS_THREADUNSAFE, &WorldSession::Handle_NULL);
+-    DEFINE_HANDLER(CMSG_LFG_LIST_SEARCH,                                    STATUS_UNHANDLED, PROCESS_THREADUNSAFE, &WorldSession::Handle_NULL);
++    DEFINE_HANDLER(CMSG_LFG_LIST_JOIN,                                      STATUS_LOGGEDIN,  PROCESS_THREADUNSAFE, &WorldSession::HandleLfgListJoin);
++    DEFINE_HANDLER(CMSG_LFG_LIST_LEAVE,                                     STATUS_LOGGEDIN,  PROCESS_THREADUNSAFE, &WorldSession::HandleLfgListLeave);
++    DEFINE_HANDLER(CMSG_LFG_LIST_SEARCH,                                    STATUS_LOGGEDIN,  PROCESS_THREADUNSAFE, &WorldSession::HandleLfgListSearch);
+     DEFINE_HANDLER(CMSG_LFG_LIST_SET_ROLES,                                 STATUS_UNHANDLED, PROCESS_THREADUNSAFE, &WorldSession::Handle_NULL);
+-    DEFINE_HANDLER(CMSG_LFG_LIST_UPDATE_REQUEST,                            STATUS_UNHANDLED, PROCESS_THREADUNSAFE, &WorldSession::Handle_NULL);
++    DEFINE_HANDLER(CMSG_LFG_LIST_UPDATE_REQUEST,                            STATUS_LOGGEDIN,  PROCESS_THREADUNSAFE, &WorldSession::HandleLfgListUpdateRequest);
+     DEFINE_HANDLER(CMSG_LIST_INVENTORY,                                     STATUS_LOGGEDIN,  PROCESS_INPLACE,      &WorldSession::HandleListInventoryOpcode);
+     DEFINE_HANDLER(CMSG_LIVE_REGION_ACCOUNT_RESTORE,                        STATUS_UNHANDLED, PROCESS_THREADUNSAFE, &WorldSession::Handle_NULL);
+     DEFINE_HANDLER(CMSG_LIVE_REGION_CHARACTER_COPY,                         STATUS_UNHANDLED, PROCESS_THREADUNSAFE, &WorldSession::Handle_NULL);
+@@ -830,7 +830,7 @@ void OpcodeTable::Initialize()
+     DEFINE_HANDLER(CMSG_REQUEST_GUILD_REWARDS_LIST,                         STATUS_LOGGEDIN,  PROCESS_THREADUNSAFE, &WorldSession::HandleRequestGuildRewardsList);
+     DEFINE_HANDLER(CMSG_REQUEST_LATEST_SPLASH_SCREEN,                       STATUS_LOGGEDIN,  PROCESS_INPLACE,      &WorldSession::HandleRequestLatestSplashScreen);
+     DEFINE_HANDLER(CMSG_REQUEST_HONOR_STATS,                                STATUS_LOGGEDIN,  PROCESS_THREADUNSAFE, &WorldSession::HandleRequestHonorStatsOpcode);
+-    DEFINE_HANDLER(CMSG_REQUEST_LFG_LIST_BLACKLIST,                         STATUS_UNHANDLED, PROCESS_INPLACE,      &WorldSession::Handle_NULL);
++    DEFINE_HANDLER(CMSG_REQUEST_LFG_LIST_BLACKLIST,                         STATUS_LOGGEDIN,  PROCESS_THREADUNSAFE, &WorldSession::HandleRequestLfgListBlackList);
+     DEFINE_HANDLER(CMSG_REQUEST_MYTHIC_PLUS_AFFIXES,                        STATUS_UNHANDLED, PROCESS_INPLACE,      &WorldSession::Handle_NULL);
+     DEFINE_HANDLER(CMSG_REQUEST_MYTHIC_PLUS_SEASON_DATA,                    STATUS_UNHANDLED, PROCESS_INPLACE,      &WorldSession::Handle_NULL);
+     DEFINE_HANDLER(CMSG_REQUEST_PARTY_JOIN_UPDATES,                         STATUS_LOGGEDIN,  PROCESS_THREADUNSAFE, &WorldSession::HandleRequestPartyJoinUpdates);
+@@ -1620,16 +1620,17 @@ void OpcodeTable::Initialize()
+     DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_EXPAND_SEARCH_PROMPT,                STATUS_UNHANDLED,    CONNECTION_TYPE_REALM);
+     DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_INSTANCE_SHUTDOWN_COUNTDOWN,         STATUS_UNHANDLED,    CONNECTION_TYPE_REALM);
+     DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_JOIN_RESULT,                         STATUS_NEVER,        CONNECTION_TYPE_REALM);
+-    DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_LIST_APPLICANT_LIST_UPDATE,          STATUS_UNHANDLED,    CONNECTION_TYPE_REALM);
+-    DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_LIST_APPLICATION_STATUS_UPDATE,      STATUS_UNHANDLED,    CONNECTION_TYPE_REALM);
+-    DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_LIST_APPLY_TO_GROUP_RESULT,          STATUS_UNHANDLED,    CONNECTION_TYPE_REALM);
+-    DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_LIST_JOIN_RESULT,                    STATUS_UNHANDLED,    CONNECTION_TYPE_REALM);
+-    DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_LIST_SEARCH_RESULTS,                 STATUS_UNHANDLED,    CONNECTION_TYPE_REALM);
++    DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_LIST_APPLICANT_LIST_UPDATE,          STATUS_NEVER,        CONNECTION_TYPE_INSTANCE);
++    DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_LIST_APPLICATION_STATUS_UPDATE,      STATUS_NEVER,        CONNECTION_TYPE_INSTANCE);
++    DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_LIST_APPLY_TO_GROUP_RESULT,          STATUS_NEVER,        CONNECTION_TYPE_INSTANCE);
++    DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_LIST_JOIN_RESULT,                    STATUS_NEVER,        CONNECTION_TYPE_INSTANCE);
++    DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_LIST_SEARCH_RESULTS,                 STATUS_NEVER,        CONNECTION_TYPE_INSTANCE);
+     DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_LIST_SEARCH_RESULTS_UPDATE,          STATUS_UNHANDLED,    CONNECTION_TYPE_REALM);
+     DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_LIST_SEARCH_STATUS,                  STATUS_UNHANDLED,    CONNECTION_TYPE_REALM);
+-    DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_LIST_UPDATE_BLACKLIST,               STATUS_UNHANDLED,    CONNECTION_TYPE_REALM);
++    DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_LIST_UPDATE_BLACKLIST,               STATUS_NEVER,        CONNECTION_TYPE_INSTANCE);
+     DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_LIST_UPDATE_EXPIRATION,              STATUS_UNHANDLED,    CONNECTION_TYPE_REALM);
+-    DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_LIST_UPDATE_STATUS,                  STATUS_UNHANDLED,    CONNECTION_TYPE_REALM);
++    DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_LIST_UPDATE_STATUS,                  STATUS_NEVER,        CONNECTION_TYPE_INSTANCE);
++    DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_LIST_UNKNOWN,                        STATUS_NEVER,        CONNECTION_TYPE_INSTANCE);
+     DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_OFFER_CONTINUE,                      STATUS_NEVER,        CONNECTION_TYPE_REALM);
+     DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_PARTY_INFO,                          STATUS_NEVER,        CONNECTION_TYPE_INSTANCE);
+     DEFINE_SERVER_OPCODE_HANDLER(SMSG_LFG_PLAYER_INFO,                         STATUS_NEVER,        CONNECTION_TYPE_INSTANCE);
+diff --git forkSrcPrefix/src/server/game/Server/Protocol/Opcodes.h forkDstPrefix/src/server/game/Server/Protocol/Opcodes.h
+index 3ebb9c101c393bce0c655474d653d25dc482c17c..b256bc99fdd75b095cc8e34beec86e4591311e74 100644
+--- forkSrcPrefix/src/server/game/Server/Protocol/Opcodes.h
++++ forkDstPrefix/src/server/game/Server/Protocol/Opcodes.h
+@@ -1551,6 +1551,7 @@ enum OpcodeServer : uint16
+     SMSG_PARTY_MEMBER_PARTIAL_STATE                   = 0x2758,
+     SMSG_PARTY_NOTIFY_LFG_LEADER_CHANGE               = 0x2877,
+     SMSG_PARTY_UPDATE                                 = 0x25F4,
++    SMSG_LFG_LIST_UNKNOWN                             = 0x25F5,
+     SMSG_PAUSE_MIRROR_TIMER                           = 0x2710,
+     SMSG_PENDING_RAID_LOCK                            = 0x26F8,
+     SMSG_PETITION_ALREADY_SIGNED                      = 0x259F,
+diff --git forkSrcPrefix/src/server/game/Server/WorldSession.h forkDstPrefix/src/server/game/Server/WorldSession.h
+index 564f1fab00b8fa330691dad4ca63bb1d031a2c72..6065548c50484ddcb109636b20dc2201e60c14d8 100644
+--- forkSrcPrefix/src/server/game/Server/WorldSession.h
++++ forkDstPrefix/src/server/game/Server/WorldSession.h
+@@ -444,6 +444,19 @@ namespace WorldPackets
+         class DFGetJoinStatus;
+     }
+ 
++    namespace LfgList
++    {
++        class LfgListSearch;
++        class LfgListJoin;
++        class LfgListLeave;
++        class RequestLfgListBlacklist;
++        class LfgListUpdateRequest;
++        class LfgListGetStatus;
++        class LfgListApplyToGroup;
++        class LfgListCancelApplication;
++        class LfgListDeclineApplicant;
++    }
++
+     namespace Loot
+     {
+         class LootUnit;
+@@ -1603,6 +1616,18 @@ class TC_GAME_API WorldSession
+         void HandleLfgTeleportOpcode(WorldPackets::LFG::DFTeleport& dfTeleport);
+         void HandleDFGetSystemInfo(WorldPackets::LFG::DFGetSystemInfo& dfGetSystemInfo);
+         void HandleDFGetJoinStatus(WorldPackets::LFG::DFGetJoinStatus& dfGetJoinStatus);
++        
++        // Group finder
++        void HandleRequestLfgListBlackList(WorldPackets::LfgList::RequestLfgListBlacklist& packet);
++        void HandleLfgListSearch(WorldPackets::LfgList::LfgListSearch& packet);
++        void HandleLfgListJoin(WorldPackets::LfgList::LfgListJoin& packet);
++        void HandleLfgListLeave(WorldPackets::LfgList::LfgListLeave& packet);
++        void HandleLfgListUpdateRequest(WorldPackets::LfgList::LfgListUpdateRequest& packet);
++        void HandleLfgListGetStatus(WorldPackets::LfgList::LfgListGetStatus& packet);
++        void HandleLfgListApplyToGroup(WorldPackets::LfgList::LfgListApplyToGroup& packet);
++        void HandleLfgListCancelApplication(WorldPackets::LfgList::LfgListCancelApplication& packet);
++        void HandleLfgListDeclineApplicant(WorldPackets::LfgList::LfgListDeclineApplicant& packet);
++
+ 
+         void SendLfgUpdateStatus(lfg::LfgUpdateData const& updateData, bool party);
+         void SendLfgRoleChosen(ObjectGuid guid, uint8 roles);
+diff --git forkSrcPrefix/src/server/game/World/World.cpp forkDstPrefix/src/server/game/World/World.cpp
+index e839a9ae36ae9b948937c40bc66ab0b2c28fe073..c018a463100921bd71276d8e6eb26be95fcfa88d 100644
+--- forkSrcPrefix/src/server/game/World/World.cpp
++++ forkDstPrefix/src/server/game/World/World.cpp
+@@ -60,6 +60,7 @@
+ #include "IPLocation.h"
+ #include "InstanceLockMgr.h"
+ #include "LFGMgr.h"
++#include "LFGListMgr.h"
+ #include "Language.h"
+ #include "LanguageMgr.h"
+ #include "Log.h"
+@@ -2692,6 +2693,11 @@ void World::Update(uint32 diff)
+         sLFGMgr->Update(diff);
+     }
+ 
++    {
++        TC_METRIC_TIMER("world_update_time", TC_METRIC_TAG("type", "Update LFGListMgr"));
++        sLFGListMgr->Update(diff);
++    }
++
+     {
+         TC_METRIC_TIMER("world_update_time", TC_METRIC_TAG("type", "Process query callbacks"));
+         // execute callbacks from sql queries that were queued recently
