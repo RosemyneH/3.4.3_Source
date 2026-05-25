@@ -2950,14 +2950,19 @@ void InstanceMap::RemovePlayerFromMap(Player* player, bool remove)
     if (i_data)
         i_data->OnPlayerLeave(player);
 
+    bool const lastPlayer = m_mapRefManager.getSize() == 1;
+
     // if last player set unload timer
-    if (!m_unloadTimer && m_mapRefManager.getSize() == 1)
+    if (!m_unloadTimer && lastPlayer)
         m_unloadTimer = (i_instanceLock && i_instanceLock->IsExpired()) ? MIN_UNLOAD_DELAY : std::max(sWorld->getIntConfig(CONFIG_INSTANCE_UNLOAD_DELAY), (uint32)MIN_UNLOAD_DELAY);
 
     if (i_scenario)
         i_scenario->OnPlayerExit(player);
 
     Map::RemovePlayerFromMap(player, remove);
+
+    if (lastPlayer)
+        PersistInstanceScriptSaveData();
 }
 
 void InstanceMap::CreateInstanceData()
@@ -3170,6 +3175,37 @@ void InstanceMap::UpdateInstanceLock(UpdateAdditionalSaveDataEvent const& update
 
         CharacterDatabase.CommitTransaction(trans);
     }
+}
+
+void InstanceMap::PersistInstanceScriptSaveData()
+{
+    if (!i_instanceLock || !i_data)
+        return;
+
+    MapDb2Entries entries{ GetEntry(), GetMapDifficulty() };
+    if (!entries.MapDifficulty->HasResetSchedule())
+        return;
+
+    uint32 instanceCompletedEncounters = i_instanceLock->GetData()->CompletedEncountersMask;
+    Optional<uint32> entrance = i_data->GetEntranceLocationForCompletedEncounters(instanceCompletedEncounters);
+
+    CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+
+    if (entries.IsInstanceIdBound())
+        sInstanceLockMgr.UpdateSharedInstanceLock(trans, InstanceLockUpdateEvent(GetInstanceId(), i_data->GetSaveData(),
+            instanceCompletedEncounters, nullptr, entrance));
+
+    for (MapReference& mapReference : m_mapRefManager)
+    {
+        Player* player = mapReference.GetSource();
+        if (player->IsGameMaster())
+            continue;
+
+        sInstanceLockMgr.UpdateInstanceLockForPlayer(trans, player->GetGUID(), entries,
+            InstanceLockUpdateEvent(GetInstanceId(), i_data->GetSaveData(), instanceCompletedEncounters, nullptr, entrance));
+    }
+
+    CharacterDatabase.CommitTransaction(trans);
 }
 
 void InstanceMap::CreateInstanceLockForPlayer(Player* player)

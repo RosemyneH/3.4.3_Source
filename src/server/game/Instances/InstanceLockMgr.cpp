@@ -103,8 +103,8 @@ void InstanceLockMgr::Load()
 {
     std::unordered_map<uint32, std::shared_ptr<SharedInstanceLockData>> instanceLockDataById;
 
-    //                                                                 0     1                        2
-    if (QueryResult result = CharacterDatabase.Query("SELECT instanceId, data, completedEncountersMask FROM instance"))
+    //                                                                 0           1     2                        3
+    if (QueryResult result = CharacterDatabase.Query("SELECT instanceId, data, completedEncountersMask, entranceWorldSafeLocId FROM instance"))
     {
         do
         {
@@ -114,6 +114,7 @@ void InstanceLockMgr::Load()
             std::shared_ptr<SharedInstanceLockData> data = std::make_shared<SharedInstanceLockData>();
             data->Data = fields[1].GetString();
             data->CompletedEncountersMask = fields[2].GetUInt32();
+            data->EntranceWorldSafeLocId = fields[3].GetUInt32();
             data->InstanceId = instanceId;
 
             instanceLockDataById[instanceId] = std::move(data);
@@ -122,8 +123,8 @@ void InstanceLockMgr::Load()
     }
 
     // ORDER BY required by MapManager::RegisterInstanceId
-    //                                                          0      1       2           3           4     5                        6           7         8
-    if (QueryResult result = CharacterDatabase.Query("SELECT guid, mapId, lockId, instanceId, difficulty, data, completedEncountersMask, expiryTime, extended FROM character_instance_lock ORDER BY instanceId"))
+    //                                                          0      1       2           3           4     5                        6           7                         8         9
+    if (QueryResult result = CharacterDatabase.Query("SELECT guid, mapId, lockId, instanceId, difficulty, data, completedEncountersMask, entranceWorldSafeLocId, expiryTime, extended FROM character_instance_lock ORDER BY instanceId"))
     {
         do
         {
@@ -134,7 +135,7 @@ void InstanceLockMgr::Load()
             uint32 lockId = fields[2].GetUInt32();
             uint32 instanceId = fields[3].GetUInt32();
             Difficulty difficulty = Difficulty(fields[4].GetUInt8());
-            InstanceResetTimePoint expiryTime = std::chrono::system_clock::from_time_t(time_t(fields[7].GetUInt64()));
+            InstanceResetTimePoint expiryTime = std::chrono::system_clock::from_time_t(time_t(fields[8].GetUInt64()));
 
             // Mark instance id as being used
             sMapMgr->RegisterInstanceId(instanceId);
@@ -158,7 +159,8 @@ void InstanceLockMgr::Load()
 
             instanceLock->GetData()->Data = fields[5].GetString();
             instanceLock->GetData()->CompletedEncountersMask = fields[6].GetUInt32();
-            instanceLock->SetExtended(fields[8].GetBool());
+            instanceLock->GetData()->EntranceWorldSafeLocId = fields[7].GetUInt32();
+            instanceLock->SetExtended(fields[9].GetBool());
 
             _instanceLocksByPlayer[playerGuid][InstanceLockKey{ mapId, lockId }].reset(instanceLock);
 

@@ -457,6 +457,8 @@ bool InstanceScript::SetBossState(uint32 id, EncounterState state)
             bossInfo->state = state;
             if (dungeonEncounter)
                 instance->UpdateInstanceLock({ dungeonEncounter, id, state });
+            else if (!instance->GetMapDifficulty()->IsUsingEncounterLocks() && state == DONE && instance->GetInstanceLock())
+                instance->PersistInstanceScriptSaveData();
         }
 
         for (GuidSet const& doorSet : bossInfo->door)

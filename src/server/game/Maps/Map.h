@@ -856,6 +856,7 @@ class TC_GAME_API InstanceMap : public Map
         InstanceLock const* GetInstanceLock() const { return i_instanceLock; }
         void UpdateInstanceLock(UpdateBossStateSaveDataEvent const& updateSaveDataEvent);
         void UpdateInstanceLock(UpdateAdditionalSaveDataEvent const& updateSaveDataEvent);
+        void PersistInstanceScriptSaveData();
         void CreateInstanceLockForPlayer(Player* player);
         TransferAbortParams CannotEnter(Player* player) override;
 
