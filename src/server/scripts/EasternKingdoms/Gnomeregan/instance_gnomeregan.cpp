@@ -24,6 +24,15 @@
 #include "Map.h"
 #include "Player.h"
 
+DungeonEncounterData const encounters[] =
+{
+    { DATA_BLASTMASTER_EVENT, {{ 379 }} },
+    { DATA_VICIOUS_FALLOUT,   {{ 378 }} },
+    { DATA_ELECTROCUTIONER,   {{ 380 }} },
+    { DATA_CROWD_PUMMELER,    {{ 381 }} },
+    { DATA_THERMAPLUGG,       {{ 382 }} }
+};
+
 class instance_gnomeregan : public InstanceMapScript
 {
 public:
@@ -40,6 +49,7 @@ public:
         {
             SetHeaders(DataHeader);
             SetBossNumber(MAX_ENCOUNTER);
+            LoadDungeonEncounterData(encounters);
         }
 
         ObjectGuid uiCaveInLeftGUID;

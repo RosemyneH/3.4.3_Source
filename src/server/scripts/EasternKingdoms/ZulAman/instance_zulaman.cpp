@@ -85,6 +85,16 @@ static ObjectData const creatureData[] =
 
 };
 
+DungeonEncounterData const encounters[] =
+{
+    { BOSS_AKILZON,  {{ 1189 }} },
+    { BOSS_NALORAKK, {{ 1190 }} },
+    { BOSS_JANALAI,  {{ 1191 }} },
+    { BOSS_HALAZZI,  {{ 1192 }} },
+    { BOSS_HEXLORD,  {{ 1193 }} },
+    { BOSS_ZULJIN,   {{ 1194 }} }
+};
+
 static ObjectData const gameObjectData[] =
 {
     { GO_MASSIVE_GATE,    GO_MASSIVE_GATE    },
@@ -109,6 +119,7 @@ class instance_zulaman : public InstanceMapScript
                 SetBossNumber(MAX_ENCOUNTER);
                 LoadDoorData(doorData);
                 LoadObjectData(creatureData, gameObjectData);
+                LoadDungeonEncounterData(encounters);
 
                 QuestTimer = 0;
                 QuestMinute = 0;

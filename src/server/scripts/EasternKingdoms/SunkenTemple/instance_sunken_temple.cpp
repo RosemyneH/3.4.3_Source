@@ -44,6 +44,7 @@ static constexpr DungeonEncounterData Encounters[]
     { BOSS_MORPHAZ, { { 490 } } },
     { BOSS_HAZZAS, { { 491 } } },
     { BOSS_SHADE_OF_ERANIKUS, { { 493 } } },
+    { BOSS_ATALALARION,        { { 489 } } },
 };
 
 static constexpr ObjectData gameObjects[] =
@@ -86,6 +87,7 @@ public:
             SetHeaders(DataHeader);
             SetBossNumber(MAX_ENCOUNTER);
             LoadDoorData(doorData);
+            LoadDungeonEncounterData(Encounters);
             LoadObjectData(nullptr, gameObjects);
             State = 0;
 

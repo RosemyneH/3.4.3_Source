@@ -30,6 +30,13 @@ EndScriptData */
 #include "Map.h"
 #include "Random.h"
 
+DungeonEncounterData const encounters[] =
+{
+    { DATA_GELIHAST, {{ 271 }} },
+    { DATA_KELRIS,   {{ 272 }} },
+    { DATA_AKU_MAI,  {{ 273 }} }
+};
+
 Position const LorgusPosition[4] =
 {
     { -458.500610f, -38.343079f, -33.474445f, 0.0f },
@@ -69,6 +76,7 @@ public:
         {
             SetHeaders(DataHeader);
             SetBossNumber(EncounterCount);
+            LoadDungeonEncounterData(encounters);
 
             countFires = 0;
             deathTimes = 0;

@@ -25,6 +25,22 @@ gets instead the deserter debuff.
 #include "ScriptMgr.h"
 #include "InstanceScript.h"
 
+enum RagefireData
+{
+    DATA_OGGLEFLINT    = 0,
+    DATA_TARAGAMAN     = 1,
+    DATA_BAZZALAN      = 2,
+    DATA_LAVA_GUARD    = 3
+};
+
+DungeonEncounterData const encounters[] =
+{
+    { DATA_OGGLEFLINT, {{ 381 }} },
+    { DATA_TARAGAMAN,  {{ 382 }} },
+    { DATA_BAZZALAN,   {{ 383 }} },
+    { DATA_LAVA_GUARD, {{ 384 }} }
+};
+
 class instance_ragefire_chasm : public InstanceMapScript
 {
 public:
@@ -37,7 +53,12 @@ public:
 
     struct instance_ragefire_chasm_InstanceMapScript : public InstanceScript
     {
-        instance_ragefire_chasm_InstanceMapScript(InstanceMap* map) : InstanceScript(map) { }
+        instance_ragefire_chasm_InstanceMapScript(InstanceMap* map) : InstanceScript(map)
+        {
+            SetHeaders("RFC");
+            SetBossNumber(4);
+            LoadDungeonEncounterData(encounters);
+        }
     };
 };
 

@@ -25,6 +25,20 @@ gets instead the deserter debuff.
 #include "ScriptMgr.h"
 #include "InstanceScript.h"
 
+enum StockadeData
+{
+    DATA_RANDOLPH_MOLOCH = 0,
+    DATA_LORD_OVERHEAT   = 1,
+    DATA_HOGGER          = 2
+};
+
+DungeonEncounterData const encounters[] =
+{
+    { DATA_RANDOLPH_MOLOCH, {{ 1146 }} },
+    { DATA_LORD_OVERHEAT,   {{ 1145 }} },
+    { DATA_HOGGER,          {{ 1144 }} }
+};
+
 class instance_the_stockade : public InstanceMapScript
 {
 public:
@@ -37,7 +51,12 @@ public:
 
     struct instance_the_stockade_InstanceMapScript : public InstanceScript
     {
-        instance_the_stockade_InstanceMapScript(InstanceMap* map) : InstanceScript(map) { }
+        instance_the_stockade_InstanceMapScript(InstanceMap* map) : InstanceScript(map)
+        {
+            SetHeaders("STK");
+            SetBossNumber(3);
+            LoadDungeonEncounterData(encounters);
+        }
     };
 };
 

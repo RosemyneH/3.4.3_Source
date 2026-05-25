@@ -27,6 +27,14 @@ gets instead the deserter debuff.
 #include "Unit.h"
 #include "the_underbog.h"
 
+DungeonEncounterData const encounters[] =
+{
+    { DATA_HUNGARFEN,         {{ 1945 }} },
+    { DATA_GHAZAN,            {{ 1946 }} },
+    { DATA_SWAMPLORD_MUSELEK, {{ 1947 }} },
+    { DATA_THE_BLACK_STALKER, {{ 1948 }} }
+};
+
 class instance_the_underbog : public InstanceMapScript
 {
 public:
@@ -38,6 +46,7 @@ public:
         {
             SetHeaders(TheUndebogDataHeader);
             SetBossNumber(TheUnderbogBossCount);
+            LoadDungeonEncounterData(encounters);
         }
 
         void OnUnitDeath(Unit* unit) override

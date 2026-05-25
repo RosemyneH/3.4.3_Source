@@ -52,6 +52,17 @@ DoorData const doorData[] =
     { 0,                    0,               EncounterDoorBehavior::OpenWhenNotInProgress } // END
 };
 
+DungeonEncounterData const encounters[] =
+{
+    { BOSS_RHAHKZOR,  {{ 283 }} },
+    { BOSS_SNEED,     {{ 285 }} },
+    { BOSS_GILNID,    {{ 286 }} },
+    { BOSS_MR_SMITE,  {{ 287 }} },
+    { BOSS_GREENSKIN, {{ 288 }} },
+    { BOSS_VANCLEEF,  {{ 289 }} },
+    { BOSS_COOKIE,    {{ 287 }} }
+};
+
 class instance_deadmines : public InstanceMapScript
 {
     public:
@@ -64,6 +75,7 @@ class instance_deadmines : public InstanceMapScript
                 SetHeaders(DataHeader);
                 SetBossNumber(EncounterCount);
                 LoadDoorData(doorData);
+                LoadDungeonEncounterData(encounters);
 
                 State = CANNON_NOT_USED;
                 CannonBlast_Timer = 0;

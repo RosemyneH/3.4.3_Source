@@ -24,6 +24,14 @@
 #include "razorfen_downs.h"
 #include "TemporarySummon.h"
 
+DungeonEncounterData const encounters[] =
+{
+    { DATA_TUTEN_KASH,                {{ 436 }} },
+    { DATA_MORDRESH_FIRE_EYE,         {{ 434 }} },
+    { DATA_GLUTTON,                   {{ 435 }} },
+    { DATA_AMNENNAR_THE_COLD_BRINGER, {{ 433 }} }
+};
+
 Position const PosSummonTutenkash[15] =
 {
     // 7349 Tomb Fiend
@@ -57,6 +65,7 @@ public:
         {
             SetHeaders(DataHeader);
             SetBossNumber(EncounterCount);
+            LoadDungeonEncounterData(encounters);
             gongWave = 0;
             fiendsKilled = 0;
             reaversKilled = 0;
