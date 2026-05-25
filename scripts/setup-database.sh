@@ -111,7 +111,9 @@ UPDATE realmlist SET
   address='127.0.0.1',
   localAddress='127.0.0.1',
   port=${REALM_PORT},
-  gamebuild=${REALM_GAMEBUILD}
+  gamebuild=${REALM_GAMEBUILD},
+  flag=flag & ~2,
+  population=0
 WHERE id=1;
 INSERT IGNORE INTO realmlist (id,name,address,localAddress,localSubnetMask,port,icon,flag,timezone,allowedSecurityLevel,population,gamebuild,Region,Battlegroup)
 VALUES (1,'${REALM_NAME}','127.0.0.1','127.0.0.1','255.255.255.0',${REALM_PORT},1,0,1,0,0,${REALM_GAMEBUILD},1,1);

@@ -43,5 +43,8 @@ if [[ -f "${REPO_ROOT}/src/server/bnetserver/bnetserver.cert.pem" ]]; then
   cp -f "${REPO_ROOT}/src/server/bnetserver/bnetserver.key.pem" "${BIN_DIR}/" 2>/dev/null || true
 fi
 
-log_info "Binaries in ${BIN_DIR}"
+log_info "Built targets in ${BIN_DIR}:"
+for name in "${BUILD_BIN_NAMES[@]}"; do
+  log_info "  ${name}"
+done
 log_info "Done. Next: ./scripts/setup-config.sh"

@@ -12,6 +12,7 @@ LOCAL_ENV="${REPO_ROOT}/local.env"
 LOCAL_DIR="${REPO_ROOT}/local"
 BUILD_DIR="${BUILD_DIR:-build}"
 BIN_DIR="${REPO_ROOT}/${BUILD_DIR}/bin"
+BUILD_BIN_NAMES=(worldserver bnetserver mapextractor vmap4extractor vmap4assembler mmaps_generator)
 LOCAL_ETC="${LOCAL_DIR}/etc"
 LOCAL_DATA="${LOCAL_DIR}/data"
 LOCAL_LOGS="${LOCAL_DIR}/logs"
@@ -119,14 +120,24 @@ ensure_local_dirs() {
 
 ensure_build_bins() {
   local name src
+  local -a missing=()
   mkdir -p "$BIN_DIR"
-  for name in worldserver bnetserver mapextractor vmap4extractor vmap4assembler mmaps_generator; do
+  for name in "${BUILD_BIN_NAMES[@]}"; do
     if [[ -x "${BIN_DIR}/${name}" ]]; then
       continue
     fi
     src="$(find "${REPO_ROOT}/${BUILD_DIR}" -name "$name" -type f -executable 2>/dev/null | head -1)"
-    [[ -n "$src" ]] && ln -sf "$src" "${BIN_DIR}/${name}"
+    if [[ -n "$src" ]]; then
+      ln -sf "$src" "${BIN_DIR}/${name}"
+    else
+      missing+=("$name")
+    fi
   done
+  if ((${#missing[@]} > 0)); then
+    log_err "Build did not produce: ${missing[*]}"
+    log_err "Re-run with TOOLS=ON and SERVERS=ON (see scripts/build.sh)."
+    exit 1
+  fi
   if [[ -f "${REPO_ROOT}/src/server/bnetserver/bnetserver.cert.pem" ]]; then
     cp -fn "${REPO_ROOT}/src/server/bnetserver/bnetserver.cert.pem" "${BIN_DIR}/" 2>/dev/null || true
     cp -fn "${REPO_ROOT}/src/server/bnetserver/bnetserver.key.pem" "${BIN_DIR}/" 2>/dev/null || true

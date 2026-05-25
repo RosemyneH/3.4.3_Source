@@ -28,6 +28,9 @@ patch_conf() {
       -e "s|^LoginREST.LocalAddress=.*|LoginREST.LocalAddress=127.0.0.1|" \
       -e "s|^LoginREST.ExternalAddress=.*|LoginREST.ExternalAddress=127.0.0.1|" \
       -e "s|^BindIP = .*|BindIP = \"127.0.0.1\"|" \
+      -e "s|^Console.Enable = .*|Console.Enable = 0|" \
+      -e "s|^Disable.Heirlooms = .*|Disable.Heirlooms = 1|" \
+      -e "s|^Disable.JoyousJourneys = .*|Disable.JoyousJourneys = 1|" \
       "$src" >"$dest"
 }
 

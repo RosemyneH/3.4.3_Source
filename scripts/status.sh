@@ -6,7 +6,7 @@ source "${SCRIPT_DIR}/lib/common.sh"
 
 check_pid() {
   local name="$1" file="${LOCAL_RUN}/${1}.pid"
-  if [[ -f "$file ]]; then
+  if [[ -f "$file" ]]; then
     local pid
     pid="$(cat "$file")"
     if kill -0 "$pid" 2>/dev/null; then
@@ -35,3 +35,12 @@ for port in 1119 8081 8085; do
     printf 'Port %s: closed\n' "$port"
   fi
 done
+
+realm_flag="$(mysql_exec_trinity auth -N -e "SELECT flag FROM realmlist WHERE id=1" 2>/dev/null || true)"
+if [[ -n "$realm_flag" ]]; then
+  if ((realm_flag & 2)); then
+    printf 'Realm: OFFLINE (flag=%s)\n' "$realm_flag"
+  else
+    printf 'Realm: online (flag=%s)\n' "$realm_flag"
+  fi
+fi
