@@ -16,6 +16,7 @@
  */
 
 #include "CollectionMgr.h"
+#include "Config.h"
 #include "DatabaseEnv.h"
 #include "DB2Stores.h"
 #include "Item.h"
@@ -166,14 +167,20 @@ void CollectionMgr::ToyClearFanfare(uint32 itemId)
 
 void CollectionMgr::OnItemAdded(Item* item)
 {
-    if (sDB2Manager.GetHeirloomByItemId(item->GetEntry()))
-        AddHeirloom(item->GetEntry(), 0);
+    if (!sConfigMgr->GetBoolDefault("Disable.Heirlooms", true))
+    {
+        if (sDB2Manager.GetHeirloomByItemId(item->GetEntry()))
+            AddHeirloom(item->GetEntry(), 0);
+    }
 
     AddItemAppearance(item);
 }
 
 void CollectionMgr::LoadAccountHeirlooms(PreparedQueryResult result)
 {
+    if (sConfigMgr->GetBoolDefault("Disable.Heirlooms", true))
+        return;
+
     if (!result)
         return;
 
@@ -222,6 +229,9 @@ bool CollectionMgr::UpdateAccountHeirlooms(uint32 itemId, uint32 flags)
 
 uint32 CollectionMgr::GetHeirloomBonus(uint32 itemId) const
 {
+    if (sConfigMgr->GetBoolDefault("Disable.Heirlooms", true))
+        return 0;
+
     HeirloomContainer::const_iterator itr = _heirlooms.find(itemId);
     if (itr != _heirlooms.end())
         return itr->second.bonusId;
@@ -231,18 +241,37 @@ uint32 CollectionMgr::GetHeirloomBonus(uint32 itemId) const
 
 void CollectionMgr::LoadHeirlooms()
 {
+    if (sConfigMgr->GetBoolDefault("Disable.Heirlooms", true))
+        return;
+
     for (auto const& item : _heirlooms)
         _owner->GetPlayer()->AddHeirloom(item.first, item.second.flags);
 }
 
 void CollectionMgr::AddHeirloom(uint32 itemId, uint32 flags)
 {
+    if (sConfigMgr->GetBoolDefault("Disable.Heirlooms", true))
+        return;
+
     if (UpdateAccountHeirlooms(itemId, flags))
         _owner->GetPlayer()->AddHeirloom(itemId, flags);
 }
 
+void CollectionMgr::ClearHeirlooms()
+{
+    _heirlooms.clear();
+
+    if (Player* player = _owner->GetPlayer())
+        player->ClearHeirloomCollection();
+
+    LoginDatabase.DirectPExecute("DELETE FROM battlenet_account_heirlooms WHERE accountId = {}", _owner->GetBattlenetAccountId());
+}
+
 void CollectionMgr::UpgradeHeirloom(uint32 itemId, int32 castItem)
 {
+    if (sConfigMgr->GetBoolDefault("Disable.Heirlooms", true))
+        return;
+
     Player* player = _owner->GetPlayer();
     if (!player)
         return;
@@ -278,6 +307,9 @@ void CollectionMgr::UpgradeHeirloom(uint32 itemId, int32 castItem)
 
 void CollectionMgr::CheckHeirloomUpgrades(Item* item)
 {
+    if (sConfigMgr->GetBoolDefault("Disable.Heirlooms", true))
+        return;
+
     Player* player = _owner->GetPlayer();
     if (!player)
         return;

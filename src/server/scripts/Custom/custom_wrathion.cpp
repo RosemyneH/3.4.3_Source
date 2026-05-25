@@ -1,47 +1,42 @@
 #include "ScriptMgr.h"
-
-// alpha testing
 #include "CollectionMgr.h"
-#include "DB2Stores.h"
-
+#include "DatabaseEnv.h"
 
 namespace
 {
-    enum class LoginSpells : uint32
-    {
-        JOYOUS_JOURNEYS             = 377749,
-    };
+    constexpr uint32 JOYOUS_JOURNEYS = 377749;
 
-    static constexpr std::array<LoginSpells, 1> g_LoginSpells = { LoginSpells::JOYOUS_JOURNEYS };
-
-    void ApplyLoginSpells(Player* player, bool firstLogin)
+    void StripJoyousJourneys(Player* player)
     {
-        for (LoginSpells spell : g_LoginSpells)
-        {
-            if (!player->HasAura(uint32(spell)))
-            {
-                if (Aura* aura = player->AddAura(uint32(spell), player))
-                {
-                    for (uint8 i = EFFECT_0; i <= EFFECT_1; ++i)
-                    {
-                        AuraEffect* xp = aura->GetEffect(i);
-                        xp->SetAmount(xp->GetBaseAmount());
-                    }
-                }
-            }
-        }
+        if (!player)
+            return;
+
+        player->RemoveAura(JOYOUS_JOURNEYS);
+        if (player->HasSpell(JOYOUS_JOURNEYS))
+            player->RemoveSpell(JOYOUS_JOURNEYS, false, false, true);
+
+        CharacterDatabase.DirectPExecute(
+            "DELETE FROM character_spell WHERE guid = {} AND spell = {}",
+            player->GetGUID().GetCounter(), JOYOUS_JOURNEYS);
+        CharacterDatabase.DirectPExecute(
+            "DELETE FROM character_aura WHERE guid = {} AND spell = {}",
+            player->GetGUID().GetCounter(), JOYOUS_JOURNEYS);
+    }
+
+    void StripHeirlooms(Player* player)
+    {
+        if (!player || !player->GetSession())
+            return;
+
+        player->GetSession()->GetCollectionMgr()->ClearHeirlooms();
     }
 
     void ProcessAlphaItems(Player* player)
     {
         if (!player->HasItemCount(1100, 1))
         {
-            player->AddItem(1100, 4);    // Monster bag
-            player->ModifyMoney(100000); // 10g
-
-            // Add all available heirlooms
-            for (HeirloomEntry const* heirloom : sHeirloomStore)
-                player->GetSession()->GetCollectionMgr()->AddHeirloom(heirloom->ItemID, 0);
+            player->AddItem(1100, 4);
+            player->ModifyMoney(100000);
         }
     }
 
@@ -73,21 +68,23 @@ namespace
 class CustomWrathionPlayer : public PlayerScript
 {
 public:
-    CustomWrathionPlayer() 
+    CustomWrathionPlayer()
         : PlayerScript("CustomWrathionPlayer") { }
 
-    void OnLogin(Player* player, bool firstLogin) override
+    void OnLogin(Player* player, bool /*firstLogin*/) override
     {
         const WorldSession* session = player->GetSession();
 
-        // Apply login spells
-        ApplyLoginSpells(player, firstLogin);
-
-        // Process any unclaimed bpay purchases
+        StripJoyousJourneys(player);
+        StripHeirlooms(player);
         ProcessUnclaimedBpayItems(session);
-
-        // Process Alpha Testing items
         ProcessAlphaItems(player);
+    }
+
+    void OnMapChanged(Player* player) override
+    {
+        StripJoyousJourneys(player);
+        StripHeirlooms(player);
     }
 };
 

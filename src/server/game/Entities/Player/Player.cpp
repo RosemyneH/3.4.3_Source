@@ -13923,20 +13923,6 @@ void Player::PrepareGossipMenu(WorldObject* source, uint32 menuId, bool showQues
         if (showQuests && source->ToGameObject()->GetGoType() == GAMEOBJECT_TYPE_QUESTGIVER)
             PrepareQuestMenu(source->GetGUID());
 
-    // alistar: add joyous journeys enable / disable button for innkeepers
-    if (showQuests && npcflags & UNIT_NPC_FLAG_INNKEEPER)
-    {
-        bool hasJoyousEnabled = false;
-
-        if (Aura* aura = GetAura(377749))
-            if (AuraEffect* effect = aura->GetEffect(EFFECT_0))
-                if (effect->GetAmount() > 0)
-                    hasJoyousEnabled = true;
-
-        GossipMenuItems joyousItem = { menuId, 10, 10, GossipOptionNpc::None, "", (hasJoyousEnabled ? 80039 : 80040), 1, 1, LANG_UNIVERSAL, GossipOptionFlags::None };
-        PlayerTalkClass->GetGossipMenu().AddMenuItem(joyousItem, joyousItem.MenuID, joyousItem.OrderIndex);
-    }
-
     for (auto const& [_, gossipMenuItem] : menuItemBounds)
     {
         if (!gossipMenuItem.Conditions.Meets(this, source))
@@ -14100,29 +14086,6 @@ void Player::OnGossipSelect(WorldObject* source, int32 gossipOptionId, uint32 me
     GossipMenuItem const* item = gossipMenu.GetItem(gossipOptionId);
     if (!item)
         return;
-
-    // alistar: hack for joyous journeys gossip
-    if (gossipOptionId == 10 && source->ToCreature() && source->ToCreature()->GetNpcFlags() & UNIT_NPC_FLAG_INNKEEPER)
-    {
-        if (Aura* aura = GetAura(377749))
-        {
-            for (uint8 i = EFFECT_0; i <= EFFECT_1; ++i)
-            {
-                AuraEffect* xp = aura->GetEffect(i);
-
-                if (xp->GetAmount() > 0)
-                    xp->SetAmount(0);
-                else
-                    xp->SetAmount(50);
-
-            }
-
-            aura->RefreshDuration();
-
-            PlayerTalkClass->SendCloseGossip();
-            return;
-        }
-    }
 
     GossipOptionNpc gossipOptionNpc = item->OptionNpc;
     ObjectGuid guid = source->GetGUID();

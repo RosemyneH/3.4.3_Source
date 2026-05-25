@@ -3324,6 +3324,22 @@ CharDelete.KeepDays = 30
 PlayerStart.AllReputation = 0
 
 #
+#    Disable.Heirlooms
+#        Description: Disables account-wide heirloom collection and login grants.
+#        Default:     0 - (Enabled)
+#                     1 - (Disabled)
+
+Disable.Heirlooms = 1
+
+#
+#    Disable.JoyousJourneys
+#        Description: Removes Joyous Journeys (377749) on login; disables innkeeper toggle.
+#        Default:     0 - (Enabled)
+#                     1 - (Disabled)
+
+Disable.JoyousJourneys = 1
+
+#
 #    XP.Boost.Daymask
 #        Description: Enables experience boost during the defined days. This field is a bitmask.
 #
