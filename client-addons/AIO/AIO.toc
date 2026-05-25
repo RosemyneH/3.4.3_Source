@@ -1,0 +1,9 @@
+## Interface: 30403
+## Title: AIO
+## Notes: All-In-One server bridge — custom gameplay and dev tools
+## Author: Trinity 3.4.3
+## Version: 1.0.0
+## DefaultState: enabled
+## LoadOnDemand: 0
+
+AIO.xml

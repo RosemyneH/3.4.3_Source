@@ -46,6 +46,22 @@ patch_wtf portal "$REALM_HOST" "$CONFIG_WTF"
 patch_wtf useIPv6 "0" "$CONFIG_WTF"
 patch_wtf agentUID "${CASC_PRODUCT:-wow_classic}" "$CONFIG_WTF"
 
+install_aio_addon() {
+  local src="${REPO_ROOT}/client-addons/AIO"
+  local dst="${WOW_CLIENT_PATH}/_classic_/Interface/AddOns/AIO"
+  if [[ ! -d "$src" ]]; then
+    log_warn "AIO addon source missing at ${src}"
+    return 0
+  fi
+  mkdir -p "$(dirname "$dst")"
+  rm -rf "$dst"
+  cp -a "$src" "$dst"
+  log_info "Installed AIO addon -> _classic_/Interface/AddOns/AIO"
+}
+
+install_aio_addon
+
 log_info "Client Config.wtf: portal=${REALM_HOST}, useIPv6=0"
 log_info "Launch from: ${WOW_CLIENT_PATH}/_classic_/WowClassic.exe (or your launcher)"
 log_info "Realm in DB: ${REALM_NAME:-Trinity} @ ${REALM_HOST}:${REALM_PORT:-8085} (build ${REALM_GAMEBUILD:-54261})"
+log_info "In-game: /aiodev opens the AIO localhost dev panel"

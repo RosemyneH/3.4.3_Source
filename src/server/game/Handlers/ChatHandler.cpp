@@ -19,6 +19,7 @@
 #include "AccountMgr.h"
 #include "Channel.h"
 #include "ChannelMgr.h"
+#include "AIO.h"
 #include "Chat.h"
 #include "ChatPackets.h"
 #include "Common.h"
@@ -497,6 +498,9 @@ void WorldSession::HandleChatAddonMessage(ChatMsg type, std::string prefix, std:
     sender->UpdateSpeakTime(Player::ChatFloodThrottle::ADDON);
 
     if (prefix == AddonChannelCommandHandler::PREFIX && AddonChannelCommandHandler(this).ParseCommands(text.c_str()))
+        return;
+
+    if (prefix == AIO::Manager::PREFIX && sAIO->HandleIncoming(sender, text))
         return;
 
     if (text.length() > 255)

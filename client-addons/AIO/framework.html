@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>AIO Framework</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 52rem; margin: 2rem auto; line-height: 1.5; }
+    code, pre { background: #1e1e2e; color: #cdd6f4; padding: 0.2em 0.4em; border-radius: 4px; }
+    pre { padding: 1rem; overflow-x: auto; }
+    h2 { margin-top: 2rem; border-bottom: 1px solid #45475a; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #45475a; padding: 0.5rem; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>AIO — All-In-One Bridge</h1>
+  <p>Bi-directional channel between the Trinity 3.4.3 worldserver and the WoW Classic client addon, using whisper addon messages.</p>
+
+  <h2>Wire format</h2>
+  <pre>Prefix: AIO
+Body:   handlerName + TAB + payload
+Payload: key=value;key2=value2</pre>
+
+  <h2>Layers</h2>
+  <table>
+    <tr><th>Layer</th><th>Location</th><th>Role</th></tr>
+    <tr><td>Server core</td><td><code>src/server/game/AIO/</code></td><td>Handler registry, codec, send</td></tr>
+    <tr><td>Server scripts</td><td><code>src/server/scripts/Custom/custom_aio.cpp</code></td><td>Built-in handlers, login flow</td></tr>
+    <tr><td>Client core</td><td><code>client-addons/AIO/Core/</code></td><td>Bus, codec, events, modules</td></tr>
+    <tr><td>Client handlers</td><td><code>client-addons/AIO/Handlers/</code></td><td>core.* and dev.* protocols</td></tr>
+    <tr><td>Client modules</td><td><code>client-addons/AIO/Modules/</code></td><td>Your gameplay features</td></tr>
+  </table>
+
+  <h2>Core handlers</h2>
+  <table>
+    <tr><th>Handler</th><th>Direction</th><th>Purpose</th></tr>
+    <tr><td><code>core.handshake</code></td><td>C→S</td><td>Client version on login</td></tr>
+    <tr><td><code>core.ready</code></td><td>S→C</td><td>Realm, build, capabilities</td></tr>
+    <tr><td><code>core.ping</code></td><td>C→S</td><td>Latency / link check</td></tr>
+    <tr><td><code>core.pong</code></td><td>S→C</td><td>Server uptime reply</td></tr>
+    <tr><td><code>core.notify</code></td><td>S→C</td><td>Colored chat line</td></tr>
+    <tr><td><code>dev.localhost</code></td><td>S→C</td><td>Local dev panel data</td></tr>
+  </table>
+
+  <h2>Client API</h2>
+  <pre>AIO.Register("my.handler", function(raw, data) end)
+AIO.Send("my.handler", "payload")
+AIO.SendTable("my.handler", { key = "value" })
+AIO.On("READY", function(serverData) end)
+AIO.Module.Define("name", function(mod) end)</pre>
+
+  <h2>Server API</h2>
+  <pre>sAIO->RegisterHandler("my.handler", [](Player* p, std::string_view payload) { });
+sAIO->SendTable(player, "my.handler", { {"key", "value"} });</pre>
+
+  <h2>Deploy</h2>
+  <pre>./scripts/prepare-client.sh   # installs addon + Config.wtf
+# In-game: /aiodev for dev panel</pre>
+</body>
+</html>
