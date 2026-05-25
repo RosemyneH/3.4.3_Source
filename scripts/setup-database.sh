@@ -43,6 +43,37 @@ SQL
 
 log_info "Databases and user '${MYSQL_USER}' ready."
 
+verify_instance_schema() {
+  local db="$1"
+  local missing
+  missing=$(mysql_exec "${MYSQL_USER}" "${MYSQL_PASS}" "$db" -N -e "
+    SELECT column_name FROM (
+      SELECT 'character_instance_lock.difficulty' AS column_name
+      UNION SELECT 'character_instance_lock.entranceWorldSafeLocId'
+      UNION SELECT 'instance.entranceWorldSafeLocId'
+    ) expected
+    WHERE column_name NOT IN (
+      SELECT CONCAT(table_name, '.', column_name)
+      FROM information_schema.columns
+      WHERE table_schema = DATABASE()
+        AND table_name IN ('character_instance_lock', 'instance')
+    );
+  " 2>/dev/null || true)
+  if [[ -n "$missing" ]]; then
+    log_err "Characters DB missing instance lock columns:"
+    echo "$missing"
+    return 1
+  fi
+  for table in character_instance_lock instance account_instance_times; do
+    if ! mysql_exec "${MYSQL_USER}" "${MYSQL_PASS}" "$db" -N -e \
+      "SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = '${table}'" 2>/dev/null | grep -q 1; then
+      log_err "Characters DB missing table: ${table}"
+      return 1
+    fi
+  done
+  log_info "Instance lock schema OK (${db})."
+}
+
 import_sql() {
   local db="$1" file="$2"
   if [[ ! -f "$file" ]]; then
@@ -86,6 +117,7 @@ INSERT IGNORE INTO realmlist (id,name,address,localAddress,localSubnetMask,port,
 VALUES (1,'${REALM_NAME}','127.0.0.1','127.0.0.1','255.255.255.0',${REALM_PORT},1,0,1,0,0,${REALM_GAMEBUILD},1,1);
 SQL
   log_info "Seeded realmlist (port ${REALM_PORT}, build ${REALM_GAMEBUILD})."
+  verify_instance_schema characters
 fi
 
-log_info "Done. Use --import to load SQL, or let servers AutoSetup on first start."
+log_info "Done. Use --import to load SQL (sql/Databases or sql/base + TDB), or let servers AutoSetup on first start."
