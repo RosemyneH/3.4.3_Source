@@ -9,3 +9,16 @@ I'd say it's around 70% playable
 Here's some gameplay on YouTube:
 
 [![Gameplay](https://i3.ytimg.com/vi/0-zKKAwukdA/maxresdefault.jpg)](https://www.youtube.com/watch?v=0-zKKAwukdA)
+
+## Local development
+
+On Arch-based systems this project uses **MariaDB** (`mariadb` package and `mariadb.service`).
+
+```bash
+cp local.env.example local.env
+./scripts/deploy-local.sh --import-db   # full setup; imports sql/Databases/*.sql if present
+./scripts/status.sh
+./scripts/stop.sh
+```
+
+Individual steps: `install-deps.sh`, `build.sh`, `fetch-sql.sh`, `fetch-tdb.sh`, `setup-config.sh`, `setup-database.sh [--import]`, `extract-client.sh`, `start.sh`.

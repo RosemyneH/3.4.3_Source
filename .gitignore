@@ -24,3 +24,13 @@ cmake-build-*/*
 *.user
 TODO.txt
 Databases.txt
+
+local/
+local.env
+local/.cache/
+sql/base/
+sql/updates/
+sql/create/
+sql/custom/
+sql/old/
+sql/archive/
