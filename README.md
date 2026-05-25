@@ -21,6 +21,6 @@ cp local.env.example local.env
 ./scripts/stop.sh
 ```
 
-Individual steps: `install-deps.sh`, `build.sh`, `fetch-sql.sh`, `fetch-tdb.sh`, `setup-config.sh`, `setup-database.sh [--import]`, `extract-client.sh`, `start.sh`.
+Individual steps: `install-deps.sh`, `build.sh`, `fetch-sql.sh`, `fetch-tdb.sh`, `setup-config.sh`, `setup-database.sh [--import]`, `verify-instance-db.sh`, `extract-client.sh`, `start.sh`.
 
 The characters database must include `character_instance_lock` (with `difficulty`, `entranceWorldSafeLocId`) and `instance` for heroic lockouts and dungeon progress. Bundled dumps live under `sql/Databases/`; without them, run `fetch-sql.sh` and import `sql/base/characters_database.sql` before starting the worldserver. `./scripts/setup-database.sh --import` verifies those tables after import.
