@@ -1355,6 +1355,13 @@ Command.LookupMaxResults = 0
 DungeonFinder.OptionsMask = 1
 
 #
+#     DungeonFinder.SoloQueue
+#        Description: Match RDF with your current party only (1-5 players). No random fill from the global queue.
+#        Default:     1 - (Enabled)
+
+DungeonFinder.SoloQueue = 1
+
+#
 #   DBC.EnforceItemAttributes
 #        Description: Disallow overriding item attributes stored in DBC files with values from the
 #                     database.

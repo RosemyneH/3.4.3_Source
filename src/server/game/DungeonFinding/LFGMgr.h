@@ -469,6 +469,8 @@ class TC_GAME_API LFGMgr
         // Proposals
         void RemoveProposal(LfgProposalContainer::iterator itProposal, LfgUpdateType type);
         void MakeNewGroup(LfgProposal const& proposal);
+        void ProcessPendingProposals(uint32 firstProposalId);
+        void TryMatchQueue(ObjectGuid queueOwner);
 
         // Generic
         LFGQueue& GetQueue(ObjectGuid guid);

@@ -348,39 +348,12 @@ void LFGMgr::Update(uint32 diff)
     }
 
     uint32 lastProposalId = m_lfgProposalId;
-    // Check if a proposal can be formed with the new groups being added
     for (LfgQueueContainer::iterator it = QueuesStore.begin(); it != QueuesStore.end(); ++it)
         if (uint8 newProposals = it->second.FindGroups())
             TC_LOG_DEBUG("lfg.update", "Found {} new groups in queue {}", newProposals, it->first);
 
     if (lastProposalId != m_lfgProposalId)
-    {
-        // FIXME lastProposalId ? lastProposalId +1 ?
-        for (LfgProposalContainer::const_iterator itProposal = ProposalsStore.find(m_lfgProposalId); itProposal != ProposalsStore.end(); ++itProposal)
-        {
-            uint32 proposalId = itProposal->first;
-            LfgProposal& proposal = ProposalsStore[proposalId];
-
-            ObjectGuid guid;
-            for (LfgProposalPlayerContainer::const_iterator itPlayers = proposal.players.begin(); itPlayers != proposal.players.end(); ++itPlayers)
-            {
-                guid = itPlayers->first;
-                SetState(guid, LFG_STATE_PROPOSAL);
-                ObjectGuid gguid = GetGroup(guid);
-                if (!gguid.IsEmpty())
-                {
-                    SetState(gguid, LFG_STATE_PROPOSAL);
-                    SendLfgUpdateStatus(guid, LfgUpdateData(LFG_UPDATETYPE_PROPOSAL_BEGIN, GetSelectedDungeons(guid)), true);
-                }
-                else
-                    SendLfgUpdateStatus(guid, LfgUpdateData(LFG_UPDATETYPE_PROPOSAL_BEGIN, GetSelectedDungeons(guid)), false);
-                SendLfgUpdateProposal(guid, proposal);
-            }
-
-            if (proposal.state == LFG_PROPOSAL_SUCCESS)
-                UpdateProposal(proposalId, guid, true);
-        }
-    }
+        ProcessPendingProposals(lastProposalId + 1);
 
     // Update all players status queue info
     if (m_QueueTimer > LFG_QUEUEUPDATE_INTERVAL)
@@ -391,6 +364,47 @@ void LFGMgr::Update(uint32 diff)
     }
     else
         m_QueueTimer += diff;
+}
+
+void LFGMgr::ProcessPendingProposals(uint32 firstProposalId)
+{
+    for (LfgProposalContainer::const_iterator itProposal = ProposalsStore.lower_bound(firstProposalId); itProposal != ProposalsStore.end(); ++itProposal)
+    {
+        uint32 proposalId = itProposal->first;
+        LfgProposal& proposal = ProposalsStore[proposalId];
+
+        ObjectGuid guid;
+        for (LfgProposalPlayerContainer::const_iterator itPlayers = proposal.players.begin(); itPlayers != proposal.players.end(); ++itPlayers)
+        {
+            guid = itPlayers->first;
+            SetState(guid, LFG_STATE_PROPOSAL);
+            ObjectGuid gguid = GetGroup(guid);
+            if (!gguid.IsEmpty())
+            {
+                SetState(gguid, LFG_STATE_PROPOSAL);
+                SendLfgUpdateStatus(guid, LfgUpdateData(LFG_UPDATETYPE_PROPOSAL_BEGIN, GetSelectedDungeons(guid)), true);
+            }
+            else
+                SendLfgUpdateStatus(guid, LfgUpdateData(LFG_UPDATETYPE_PROPOSAL_BEGIN, GetSelectedDungeons(guid)), false);
+            SendLfgUpdateProposal(guid, proposal);
+        }
+
+        if (proposal.state == LFG_PROPOSAL_SUCCESS)
+            UpdateProposal(proposalId, guid, true);
+    }
+}
+
+void LFGMgr::TryMatchQueue(ObjectGuid queueOwner)
+{
+    if (!sWorld->getBoolConfig(CONFIG_LFG_SOLO_QUEUE))
+        return;
+
+    uint32 lastProposalId = m_lfgProposalId;
+    LFGQueue& queue = GetQueue(queueOwner);
+    queue.FindGroups();
+
+    if (lastProposalId != m_lfgProposalId)
+        ProcessPendingProposals(lastProposalId + 1);
 }
 
 /**
@@ -630,6 +644,7 @@ void LFGMgr::JoinLfg(Player* player, uint8 roles, LfgDungeonSet& dungeons)
         player->GetSession()->SendLfgUpdateStatus(LfgUpdateData(LFG_UPDATETYPE_ADDED_TO_QUEUE, dungeons), false);
         player->GetSession()->SendLfgJoinResult(joinData);
         debugNames.append(player->GetName());
+        TryMatchQueue(guid);
     }
 
     // alistar: for some reason for join/leave df they didn't play this sound client side.
@@ -829,6 +844,7 @@ void LFGMgr::UpdateRoleCheck(ObjectGuid gguid, ObjectGuid guid /* = ObjectGuid::
         LFGQueue& queue = GetQueue(gguid);
         queue.AddQueueData(gguid, time_t(GameTime::GetGameTime()), roleCheck.dungeons, roleCheck.roles);
         RoleChecksStore.erase(itRoleCheck);
+        TryMatchQueue(gguid);
     }
     else if (roleCheck.state != LFG_ROLECHECK_INITIALITING)
     {
