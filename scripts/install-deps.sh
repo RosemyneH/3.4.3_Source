@@ -15,6 +15,7 @@ if is_arch; then
     arch_packages+=(zlib)
   fi
   sudo pacman -S --needed --noconfirm "${arch_packages[@]}"
+  "${SCRIPT_DIR}/install-boost-process.sh"
   if [[ ! -d /var/lib/mysql/mysql ]] && [[ ! -f /var/lib/mysql/ibdata1 ]]; then
     log_info "Initializing MariaDB data directory..."
     sudo mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql

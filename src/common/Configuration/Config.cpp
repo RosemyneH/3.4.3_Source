@@ -18,6 +18,7 @@
 #include "Config.h"
 #include "Log.h"
 #include "StringConvert.h"
+#include <boost/filesystem/directory.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <algorithm>
@@ -179,10 +180,11 @@ bool ConfigMgr::LoadAdditionalDir(std::string const& dir, bool keepOnReload, std
 
     for (fs::directory_entry const& f : fs::recursive_directory_iterator(dirPath))
     {
-        if (!fs::is_regular_file(f))
+        fs::path const entryPath = f.path();
+        if (!fs::is_regular_file(entryPath))
             continue;
 
-        fs::path configFile = fs::absolute(f);
+        fs::path configFile = fs::absolute(entryPath);
         if (configFile.extension() != ".conf")
             continue;
 

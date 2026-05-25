@@ -58,6 +58,11 @@ target_include_directories(common
   PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR})
 
+set(BOOST_PROCESS_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/local/.cache/boost-process/include")
+if(EXISTS "${BOOST_PROCESS_INCLUDE_DIR}/boost/process/args.hpp")
+  target_include_directories(common PUBLIC "${BOOST_PROCESS_INCLUDE_DIR}")
+endif()
+
 target_link_libraries(common
   PRIVATE
     trinity-core-interface

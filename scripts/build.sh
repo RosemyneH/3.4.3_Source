@@ -18,6 +18,10 @@ CMAKE_ARGS=(
 if is_arch && command -v mariadb_config &>/dev/null; then
   CMAKE_ARGS+=(-DMYSQL_EXECUTABLE="$(command -v mariadb)")
 fi
+if is_arch; then
+  CMAKE_ARGS+=(-DNOJEM=ON)
+  "${SCRIPT_DIR}/install-boost-process.sh"
+fi
 
 log_info "Configuring (${BUILD_TYPE})..."
 cmake "${CMAKE_ARGS[@]}"

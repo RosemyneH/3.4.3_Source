@@ -62,3 +62,10 @@ target_link_libraries(trinity-core-interface
   INTERFACE
     trinity-default-interface
     trinity-warning-interface)
+
+if(UNIX)
+  target_compile_options(trinity-core-interface INTERFACE
+    "-include${CMAKE_SOURCE_DIR}/cmake/boost_filesystem_fix.h")
+  target_compile_options(trinity-dependency-interface INTERFACE
+    "-include${CMAKE_SOURCE_DIR}/cmake/boost_filesystem_fix.h")
+endif()

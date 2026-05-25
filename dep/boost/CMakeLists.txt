@@ -29,7 +29,12 @@ else()
   set(BOOST_REQUIRED_VERSION 1.71)
 endif()
 
-find_package(Boost ${BOOST_REQUIRED_VERSION} REQUIRED system filesystem program_options iostreams regex locale)
+if(WIN32)
+  find_package(Boost ${BOOST_REQUIRED_VERSION} REQUIRED system filesystem program_options iostreams regex locale)
+else()
+  # Boost.System stub removed in 1.89+; header-only since 1.69
+  find_package(Boost ${BOOST_REQUIRED_VERSION} REQUIRED filesystem program_options iostreams regex locale)
+endif()
 
 if(NOT Boost_FOUND)
   if(NOT DEFINED ENV{BOOST_ROOT} AND NOT DEFINED Boost_DIR AND NOT DEFINED BOOST_ROOT AND NOT DEFINED BOOSTROOT)
