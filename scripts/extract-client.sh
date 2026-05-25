@@ -23,19 +23,21 @@ if [[ -z "$WOW_CLIENT_PATH" || ! -d "$WOW_CLIENT_PATH" ]]; then
   exit 1
 fi
 
+ensure_build_bins
 require_cmd "$BIN_DIR/mapextractor" "$BIN_DIR/vmap4extractor" "$BIN_DIR/vmap4assembler"
 
 ensure_local_dirs
 WORK="${LOCAL_CACHE}/extract"
 mkdir -p "$WORK"
+rm -rf "${WORK}/Buildings" "${WORK}/vmaps" "${WORK}/dir" "${WORK}/dir_bin"
 cd "$WORK"
 
-export WOW_CLIENT_PATH
+CASC_PRODUCT="${CASC_PRODUCT:-wow_classic}"
 log_info "Running mapextractor (client: ${WOW_CLIENT_PATH})..."
 "$BIN_DIR/mapextractor" -i "$WOW_CLIENT_PATH" -o "$LOCAL_DATA"
 
 log_info "Running vmap4extractor..."
-"$BIN_DIR/vmap4extractor"
+"$BIN_DIR/vmap4extractor" -d "$WOW_CLIENT_PATH" -p "$CASC_PRODUCT"
 log_info "Running vmap4assembler..."
 "$BIN_DIR/vmap4assembler" Buildings vmaps
 
@@ -43,18 +45,13 @@ if [[ -d vmaps ]]; then
   rm -rf "${LOCAL_DATA}/vmaps"
   mv vmaps "${LOCAL_DATA}/"
 fi
-if [[ -d Buildings ]]; then
-  rm -rf Buildings
-fi
+rm -rf Buildings dir dir_bin 2>/dev/null || true
 
 if [[ "$SKIP_MMAPS" -eq 0 ]]; then
   require_cmd "$BIN_DIR/mmaps_generator"
   log_info "Running mmaps_generator (this may take a long time)..."
-  "$BIN_DIR/mmaps_generator"
-  if [[ -d mmaps ]]; then
-    rm -rf "${LOCAL_DATA}/mmaps"
-    mv mmaps "${LOCAL_DATA}/"
-  fi
+  cd "$LOCAL_DATA"
+  "$BIN_DIR/mmaps_generator" --silent
 else
   log_info "Skipped mmaps (--skip-mmaps)."
 fi

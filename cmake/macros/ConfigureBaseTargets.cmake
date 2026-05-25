@@ -64,8 +64,9 @@ target_link_libraries(trinity-core-interface
     trinity-warning-interface)
 
 if(UNIX)
+  set(_boost_fs_fix "-include${CMAKE_SOURCE_DIR}/cmake/boost_filesystem_fix.h")
   target_compile_options(trinity-core-interface INTERFACE
-    "-include${CMAKE_SOURCE_DIR}/cmake/boost_filesystem_fix.h")
+    "$<$<COMPILE_LANGUAGE:CXX>:${_boost_fs_fix}>")
   target_compile_options(trinity-dependency-interface INTERFACE
-    "-include${CMAKE_SOURCE_DIR}/cmake/boost_filesystem_fix.h")
+    "$<$<COMPILE_LANGUAGE:CXX>:${_boost_fs_fix}>")
 endif()

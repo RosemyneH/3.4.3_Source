@@ -117,6 +117,22 @@ ensure_local_dirs() {
   mkdir -p "$LOCAL_DATA"/{maps,vmaps,mmaps,dbc,gt}
 }
 
+ensure_build_bins() {
+  local name src
+  mkdir -p "$BIN_DIR"
+  for name in worldserver bnetserver mapextractor vmap4extractor vmap4assembler mmaps_generator; do
+    if [[ -x "${BIN_DIR}/${name}" ]]; then
+      continue
+    fi
+    src="$(find "${REPO_ROOT}/${BUILD_DIR}" -name "$name" -type f -executable 2>/dev/null | head -1)"
+    [[ -n "$src" ]] && ln -sf "$src" "${BIN_DIR}/${name}"
+  done
+  if [[ -f "${REPO_ROOT}/src/server/bnetserver/bnetserver.cert.pem" ]]; then
+    cp -fn "${REPO_ROOT}/src/server/bnetserver/bnetserver.cert.pem" "${BIN_DIR}/" 2>/dev/null || true
+    cp -fn "${REPO_ROOT}/src/server/bnetserver/bnetserver.key.pem" "${BIN_DIR}/" 2>/dev/null || true
+  fi
+}
+
 wait_for_port() {
   local host="$1" port="$2" tries="${3:-30}"
   local i

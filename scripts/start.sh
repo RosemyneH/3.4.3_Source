@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 
 ensure_local_dirs
+ensure_build_bins
 
 if ! mysql_exec_trinity -e "SELECT 1" &>/dev/null; then
   log_err "Cannot connect to MariaDB as ${MYSQL_USER:-trinity}. Run ./scripts/setup-database.sh"

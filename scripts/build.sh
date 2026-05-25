@@ -30,6 +30,7 @@ log_info "Building..."
 cmake --build "${REPO_ROOT}/${BUILD_DIR}" -j"$(nproc)"
 
 ensure_local_dirs
+ensure_build_bins
 for conf in worldserver.conf bnetserver.conf; do
   dist="${BIN_DIR}/${conf}.dist"
   if [[ -f "$dist" && ! -e "${BIN_DIR}/${conf}" ]]; then

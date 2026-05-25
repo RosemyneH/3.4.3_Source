@@ -562,16 +562,16 @@ void BattlepayManager::SendBattlePayDistribution(uint32 productId, uint8 status,
         return;
 
     WorldPackets::BattlePay::DistributionUpdate distributionBattlePay;
-    distributionBattlePay.DistributionObject.DistributionID = distributionId;
-    distributionBattlePay.DistributionObject.Status = status;
-    distributionBattlePay.DistributionObject.ProductID = productId;
-    distributionBattlePay.DistributionObject.Revoked = false; // not needed for us
+    distributionBattlePay.Distribution.DistributionID = distributionId;
+    distributionBattlePay.Distribution.Status = status;
+    distributionBattlePay.Distribution.ProductID = productId;
+    distributionBattlePay.Distribution.Revoked = false; // not needed for us
 
     if (!targetGuid.IsEmpty())
     {
-        distributionBattlePay.DistributionObject.TargetPlayer = targetGuid;
-        distributionBattlePay.DistributionObject.TargetVirtualRealm = GetVirtualRealmAddress();
-        distributionBattlePay.DistributionObject.TargetNativeRealm = GetVirtualRealmAddress();
+        distributionBattlePay.Distribution.TargetPlayer = targetGuid;
+        distributionBattlePay.Distribution.TargetVirtualRealm = GetVirtualRealmAddress();
+        distributionBattlePay.Distribution.TargetNativeRealm = GetVirtualRealmAddress();
     }
 
     WorldPackets::BattlePay::Product productData;
@@ -620,7 +620,7 @@ void BattlepayManager::SendBattlePayDistribution(uint32 productId, uint8 status,
         productData.Display = std::get<1>(data);
     }
 
-    distributionBattlePay.DistributionObject.Product = std::move(productData);
+    distributionBattlePay.Distribution.ProductData = std::move(productData);
     _session->SendPacket(distributionBattlePay.Write());
 }
 
